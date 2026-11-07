@@ -125,6 +125,31 @@ table.sc th{font-size:12px;color:var(--muted);text-transform:uppercase}
 .phbox{width:80px;height:104px;border-radius:12px;background:var(--chip);flex:none;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
 .phbox img{width:100%;height:100%;object-fit:contain}
 .imp{padding-left:18px;margin:8px 0 0}
+
+.tabs button{white-space:nowrap}
+@media(max-width:400px){.tabs button{font-size:10px}}
+.mkhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:4px 2px 12px}
+.mkgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mk{background:var(--card);border-radius:14px;overflow:hidden;cursor:pointer}
+.mkimg{aspect-ratio:1;background:var(--chip);display:grid;place-items:center;color:var(--muted);overflow:hidden}
+.mkimg img{width:100%;height:100%;object-fit:cover;display:block}
+.mkb{padding:9px 10px 11px}.mkp{font-size:17px}
+.mkt{font-weight:600;font-size:14px;margin:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mkbadge{display:inline-block;margin-top:5px;background:var(--chip);border-radius:999px;font-size:10px;padding:2px 8px;font-weight:700;color:var(--muted)}
+.mkph{display:flex;gap:8px}
+.mkth,.mkadd{position:relative;width:84px;height:84px;border-radius:12px;overflow:hidden;background:var(--chip);flex:none}
+.mkth img{width:100%;height:100%;object-fit:cover;display:block}
+.mkx{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:15px;line-height:1;padding:0}
+.mkadd{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;color:var(--muted);cursor:pointer;border:2px dashed var(--line);background:transparent}
+.mkadd span{font-size:11px;font-weight:600}
+.mkmain{width:100%;aspect-ratio:1;object-fit:cover;border-radius:14px;background:var(--chip);display:block}
+.mkthumbs{display:flex;gap:8px;margin-top:8px}
+.mkthumbs button{border:0;padding:0;width:56px;height:56px;border-radius:10px;overflow:hidden;background:none}
+.mkthumbs img{width:100%;height:100%;object-fit:cover;display:block}
+.mkprice{font-size:26px;font-weight:800;margin:12px 0 2px}
+.mkrow{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.mkrow span:first-child{color:var(--muted)}
+a.btn{display:block;text-align:center;text-decoration:none;margin-top:12px}
 </style>
 </head>
 <body>
@@ -290,10 +315,12 @@ function render(){
   else if(tab==="board")h=viewBoard();
   else if(tab==="races")h=viewRaces();
   else if(tab==="riders")h=viewRiders();
+  else if(tab==="market")h=viewMarket();
   else if(tab==="admin"&&ADMIN)h=viewAdmin();
   else h=viewRules();
   v.innerHTML=h;
   var T=[["board","Pole position",'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>'],["races","Races",'<path d="M4 21V4M4 5h13l-2 4 2 4H4"/>'],["riders","Riders",'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 5a3.2 3.2 0 0 1 0 6M18 14.8c1.8.6 3 2.2 3.5 5"/>'],["rules","Scoring",'<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/>']];
+  T.push(["market","Marketplace",'<path d="M6 7h12l1 13H5L6 7z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/>']);
   if(ADMIN)T.push(["admin","Admin",'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']);
   $("tabs").style.gridTemplateColumns="repeat("+T.length+",1fr)";
   $("tabs").innerHTML=T.map(function(t){return '<button type="button" data-t="'+t[0]+'" class="'+((!openRider&&tab===t[0])?"on":"")+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+t[2]+'</svg>'+t[1]+'</button>';}).join("");
@@ -670,6 +697,128 @@ document.addEventListener("keydown",function(e){
   if(e.key==="Escape")closeModal();
   else if(e.key==="Enter"&&e.target.tagName==="INPUT"&&e.target.type!=="file"&&e.target.type!=="checkbox"){var p=m.querySelector("[data-primary]");if(p){e.preventDefault();p.click();}}
 });
+/* ================= MARKETPLACE + rider photo picker ================= */
+var LSM="cpb_market_mine_v1",MINE=[];
+try{MINE=JSON.parse(localStorage.getItem(LSM)||"[]");if(!Array.isArray(MINE))MINE=[];}catch(_){MINE=[];}
+function mkSave(mine){
+  if(mine){try{localStorage.setItem(LSM,JSON.stringify(MINE));return true;}catch(e){toast("Browser storage is full – remove a photo or an old listing");return false;}}
+  D.market=D.market||[];return save();
+}
+function mkAll(){return(D.market||[]).map(function(x){return{x:x,mine:false};}).concat(MINE.map(function(x){return{x:x,mine:true};})).sort(function(a,b){return(b.x.ts||0)-(a.x.ts||0);});}
+function mkFind(id){var i,a=D.market||[];for(i=0;i<a.length;i++)if(a[i].id===id)return{x:a[i],mine:false};for(i=0;i<MINE.length;i++)if(MINE[i].id===id)return{x:MINE[i],mine:true};return null;}
+function rm(n){return"RM "+Number(n).toLocaleString("en-MY",{maximumFractionDigits:2});}
+async function mkPhoto(blob){
+  var bm=await createImageBitmap(blob),s=Math.min(1,720/bm.width,720/bm.height),w=Math.max(1,Math.round(bm.width*s)),h=Math.max(1,Math.round(bm.height*s));
+  var c=document.createElement("canvas");c.width=w;c.height=h;var g=c.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,w,h);g.drawImage(bm,0,0,w,h);if(bm.close)bm.close();
+  return c.toDataURL("image/jpeg",0.8);
+}
+var BOXICON='<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>';
+
+function viewMarket(){
+  var L=mkAll(),h='<div class="mkhead"><div><h3 style="margin:0">Marketplace</h3><div class="note">Buy and sell pushbike gear</div></div><button type="button" class="btn" style="width:auto;padding:12px 16px" data-act="mk-add">+ Sell an item</button></div>';
+  if(!L.length)h+='<div class="card empty">Nothing for sale yet.<br>Tap “Sell an item” to post the first one.</div>';
+  else h+='<div class="mkgrid">'+L.map(function(o){
+    var x=o.x;
+    return'<div class="mk" data-act="mk-open" data-id="'+esc(x.id)+'"><div class="mkimg">'+(x.photos&&x.photos[0]?'<img src="'+x.photos[0]+'" alt="">':BOXICON)+'</div><div class="mkb"><b class="mkp">'+esc(rm(x.price))+'</b><div class="mkt">'+esc(x.title)+'</div><div class="note">'+esc([x.brand,x.location].filter(Boolean).join(" · "))+'</div>'+(o.mine?'<span class="mkbadge">Only on this device</span>':'')+'</div></div>';
+  }).join("")+'</div>';
+  if(MINE.length)h+='<p class="note" style="margin:12px 2px">Items marked “Only on this device” are saved in this browser and are not yet visible to other people. Send them to the club admin to publish for everyone.</p>';
+  return h;
+}
+function mkOpen(id){
+  var f=mkFind(id);if(!f)return;var x=f.x,ph=x.photos||[];
+  var wa=x.phone?'https://wa.me/'+x.phone+'?text='+encodeURIComponent("Hi, I'm interested in your "+x.title+" ("+rm(x.price)+") on the CorePushBike marketplace."):"";
+  modal((ph.length?'<img class="mkmain" id="mk_main" src="'+ph[0]+'" alt="">'+(ph.length>1?'<div class="mkthumbs">'+ph.map(function(u,i){return'<button type="button" data-act="mk-thumb" data-i="'+i+'"><img src="'+u+'" alt=""></button>';}).join("")+'</div>':''):'<div class="mkimg" style="aspect-ratio:2/1;border-radius:14px">'+BOXICON+'</div>')
+   +'<div class="mkprice">'+esc(rm(x.price))+'</div><h2 class="mh" style="margin:0 0 8px">'+esc(x.title)+'</h2>'
+   +(x.brand?'<div class="mkrow"><span>Brand</span><b>'+esc(x.brand)+'</b></div>':'')
+   +'<div class="mkrow"><span>Location</span><b>'+esc(x.location)+'</b></div>'
+   +(x.seller?'<div class="mkrow"><span>Seller</span><b>'+esc(x.seller)+'</b></div>':'')
+   +(x.ts?'<div class="mkrow"><span>Posted</span><b>'+esc(new Date(x.ts).toLocaleDateString())+'</b></div>':'')
+   +(wa?'<a class="btn" href="'+esc(wa)+'" target="_blank" rel="noopener">WhatsApp seller</a>':'')
+   +((f.mine||ADMIN)?'<div class="brow"><button type="button" class="btn s" data-act="mk-edit" data-id="'+esc(id)+'">Edit</button><button type="button" class="btn d" data-act="mk-del" data-id="'+esc(id)+'">Delete</button></div>':'')
+   +'<button type="button" class="btn s" style="margin-top:10px" data-act="close">Close</button>');
+}
+var mkPics=[],mkEditId=null;
+function mkStrip(){
+  var el=$("mk_ph");if(!el)return;
+  var h=mkPics.map(function(u,i){return'<div class="mkth"><img src="'+u+'" alt=""><button type="button" class="mkx" data-act="mk-rm" data-i="'+i+'" aria-label="Remove photo">×</button></div>';}).join("");
+  if(mkPics.length<3)h+='<label class="mkadd">+<span>Add photo</span><input type="file" id="mk_pf" accept="image/*" multiple hidden></label>';
+  el.innerHTML=h;
+}
+function mkForm(id){
+  var f=id?mkFind(id):null,x=f?f.x:{title:"",brand:"",price:"",location:"",seller:"",phone:"",photos:[]};
+  mkEditId=id||null;mkPics=(x.photos||[]).slice();
+  var ph=x.phone&&x.phone.charAt(0)==="6"?"0"+x.phone.slice(2):(x.phone||"");
+  modal('<h2 class="mh">'+(id?"Edit item":"Sell an item")+'</h2>'
+   +'<div class="fl"><span>Photos (up to 3)</span><div id="mk_ph" class="mkph"></div></div>'
+   +fld("Item name","mk_title",x.title,'placeholder="e.g. Strider 14X push bike"')
+   +fld("Brand","mk_brand",x.brand,'placeholder="e.g. Strider"')
+   +fld("Price (RM)","mk_price",x.price,'inputmode="decimal" placeholder="e.g. 250"')
+   +fld("Location","mk_loc",x.location,'placeholder="e.g. Kajang, Selangor"')
+   +fld("Your name (optional)","mk_seller",x.seller)
+   +fld("WhatsApp number (optional)","mk_phone",ph,'inputmode="tel" placeholder="e.g. 0123456789"')
+   +'<p class="note" style="margin:10px 0 0">'+(ADMIN?"As admin, this item is published to everyone when you download the updated app.":"This item is saved on this device. Send it to the club admin to publish it for everyone.")+'</p>'
+   +'<div class="brow"><button type="button" class="btn s" data-act="close">Cancel</button><button type="button" class="btn" data-primary data-act="mk-save">'+(id?"Save":"Post item")+'</button></div>');
+  mkStrip();
+}
+function mkSaveForm(){
+  var title=$("mk_title").value.trim(),price=parseFloat(String($("mk_price").value).replace(/[^0-9.]/g,"")),loc=$("mk_loc").value.trim();
+  if(!title){toast("Enter the item name");return;}
+  if(!(price>=0)||isNaN(price)){toast("Enter the price");return;}
+  if(!loc){toast("Enter the location");return;}
+  var ph=($("mk_phone").value||"").replace(/\D/g,"");if(ph.charAt(0)==="0")ph="6"+ph;
+  var rec={title:title,brand:$("mk_brand").value.trim(),price:price,location:loc,seller:$("mk_seller").value.trim(),phone:ph,photos:mkPics.slice()},ok;
+  if(mkEditId){var f=mkFind(mkEditId);if(!f)return;Object.assign(f.x,rec);ok=mkSave(f.mine);}
+  else{
+    rec.id="m"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);rec.ts=Date.now();
+    if(ADMIN){D.market=D.market||[];D.market.push(rec);ok=mkSave(false);}
+    else{MINE.push(rec);ok=mkSave(true);if(!ok)MINE.pop();}
+  }
+  if(!ok)return;
+  closeModal();render();toast(mkEditId?"Item updated":"Item posted");
+}
+document.addEventListener("click",function(e){
+  var a=e.target.closest("[data-act]");if(!a)return;var act=a.dataset.act;if(act.indexOf("mk-")!==0)return;
+  if(act==="mk-add")mkForm(null);
+  else if(act==="mk-open")mkOpen(a.dataset.id);
+  else if(act==="mk-thumb"){var m=$("mk_main"),im=a.querySelector("img");if(m&&im)m.src=im.src;}
+  else if(act==="mk-edit")mkForm(a.dataset.id);
+  else if(act==="mk-rm"){mkPics.splice(+a.dataset.i,1);mkStrip();}
+  else if(act==="mk-save")mkSaveForm();
+  else if(act==="mk-del"){
+    var f=mkFind(a.dataset.id);if(!f||!(f.mine||ADMIN))return;if(!confirm("Delete this item?"))return;
+    if(f.mine){MINE=MINE.filter(function(y){return y.id!==f.x.id;});mkSave(true);}else{D.market=D.market.filter(function(y){return y.id!==f.x.id;});mkSave(false);}
+    closeModal();render();toast("Item deleted");
+  }
+});
+
+/* ---- rider photo: pick an existing rider ---- */
+var lastQp=null;
+var riderForm0=riderForm;
+riderForm=function(id){
+  riderForm0(id);
+  var h2=document.querySelector("#modal .mh");if(!h2)return;
+  h2.insertAdjacentHTML("afterend",'<label class="fl"><span>Choose an existing rider to edit or update their photo</span><select id="f_pick"><option value="">+ New rider</option>'
+    +RIDERS.slice().sort(function(a,b){return a.nick.localeCompare(b.nick);}).map(function(r){return'<option value="'+esc(r.id)+'"'+(r.id===id?" selected":"")+'>'+esc(r.nick)+(r.pic?"":" (no photo)")+'</option>';}).join("")+'</select></label>');
+};
+var viewAdmin0=viewAdmin;
+viewAdmin=function(){
+  var h=viewAdmin0(),opts=RIDERS.slice().sort(function(a,b){return a.nick.localeCompare(b.nick);}).map(function(r){return'<option value="'+esc(r.id)+'"'+(r.id===lastQp?" selected":"")+'>'+esc(r.nick)+(r.pic?"":" (no photo)")+'</option>';}).join("");
+  var card='<div class="card"><b>Update a rider photo</b><p class="note">Pick an existing rider, then choose a photo. It is saved straight away.</p><label class="fl"><span>Rider</span><select id="qp_rider">'+opts+'</select></label><label class="btn" style="display:block;text-align:center">Choose photo<input type="file" id="qpf" accept="image/*" hidden></label></div>';
+  return h.replace('<div class="card"><b>Add or edit</b>',card+'<div class="card"><b>Add or edit</b>');
+};
+document.addEventListener("change",function(e){
+  var t=e.target,f=t.files&&t.files[0];
+  if(t.id==="mk_pf"&&f){
+    var room=3-mkPics.length,fs=Array.from(t.files).slice(0,room);
+    if(t.files.length>room)toast("Maximum 3 photos");
+    Promise.all(fs.map(mkPhoto)).then(function(us){us.forEach(function(u){if(mkPics.length<3)mkPics.push(u);});mkStrip();}).catch(function(){toast("Could not read that image");});
+  }else if(t.id==="qpf"&&ADMIN&&f){
+    var id=$("qp_rider").value;lastQp=id;
+    blobToPic(f).then(function(u){byId[id].pic=u;if(save()){render();toast(byId[id].nick+" photo updated");}}).catch(function(){toast("Could not read that image");});
+    t.value="";
+  }else if(t.id==="f_pick"&&ADMIN){riderForm(t.value||null);}
+});
+
 window.__cpb={derive:derive,parseWorkbook:parseWorkbook,buildImport:buildImport,sha256:sha256,get D(){return D;}};
 
 renderHeaderStats();render();
