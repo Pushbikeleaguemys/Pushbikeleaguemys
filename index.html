@@ -116,8 +116,12 @@ table.sc th{font-size:12px;color:var(--muted);text-transform:uppercase}
 .mh{margin:0 0 6px;font-size:20px}
 .fl{display:block;margin:10px 0 0}
 .fl span{display:block;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:4px}
-.fl input,.fl select{width:100%;font:inherit;font-size:16px;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.fl input,.fl select,.fl textarea{width:100%;font:inherit;font-size:16px;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
 .fl input[readonly]{opacity:.6}
+.fl textarea{resize:vertical;min-height:84px;line-height:1.4}
+.mkdesc{padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.mkdesc span{display:block;color:var(--muted);margin-bottom:3px}
+.mkdesc div{white-space:pre-wrap;word-break:break-word;line-height:1.45}
 .chk{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:10px}
 .brow{display:flex;gap:8px;margin-top:14px}.brow .btn{flex:1}
 .btn.d{background:var(--hot);color:#fff}
@@ -150,6 +154,23 @@ table.sc th{font-size:12px;color:var(--muted);text-transform:uppercase}
 .mkrow{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 .mkrow span:first-child{color:var(--muted)}
 a.btn{display:block;text-align:center;text-decoration:none;margin-top:12px}
+
+.pav.zoom{cursor:zoom-in}
+.zoomimg{display:block;width:100%;max-height:70vh;object-fit:contain;border-radius:14px;background:#000}
+.evcard{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 14px;border-bottom:1px solid var(--line)}
+.evcard:last-child{border-bottom:0}
+.evcard .evn{font-weight:700;font-size:15px;word-break:break-word}
+.evcard .evl{color:var(--muted);font-size:13px;margin-top:2px}
+.evdate{flex:none;text-align:center;background:var(--chip);border-radius:12px;padding:6px 10px;min-width:56px;font-weight:800;line-height:1.1}
+.evdate small{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}
+.evdw{position:relative;flex:none;isolation:isolate}
+.evflag{position:absolute;top:-11px;left:-11px;font-size:26px;line-height:1;transform:rotate(-18deg);z-index:0;pointer-events:none}
+.evdate{position:relative;z-index:1}
+.evcard.past{opacity:.65}
+.evsub{margin:12px 2px 6px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.evhead{display:flex;justify-content:space-between;align-items:center;gap:10px}
+details.lg{margin:10px 0}details.lg>summary{cursor:pointer;font-weight:700;padding:12px 14px;background:var(--card);border-radius:14px;list-style:none}
+details.lg[open]>summary{border-radius:14px 14px 0 0}
 </style>
 </head>
 <body>
@@ -284,7 +305,7 @@ function viewProfile(id){
   var r=byId[id],all=standings(null),me=all.filter(function(s){return s.r.id===id;})[0];
   var mine=RES.filter(function(x){return x.rid===id;});
   var h='<button class="back" id="back" type="button">‹ Back</button>';
-  h+='<div class="pole"><span class="tag">'+(me.rank?"OVERALL "+ord(me.rank):"NO RESULTS YET")+'</span><div class="pts"><b>'+me.pts+'</b><span>POINTS</span></div><div class="prow">'+(r.pic?'<div class="pav"><img src="'+r.pic+'" alt=""></div>':'<div class="pav lockd">'+sil()+'</div>')+'<div><h2>'+esc(r.nick)+'</h2><div class="sub">'+esc(r.name)+(r.bib?' · #'+r.bib:'')+'</div></div></div></div>';
+  h+='<div class="pole"><span class="tag">'+(me.rank?"OVERALL "+ord(me.rank):"NO RESULTS YET")+'</span><div class="pts"><b>'+me.pts+'</b><span>POINTS</span></div><div class="prow">'+(r.pic?'<div class="pav zoom" data-act="pic-zoom" data-id="'+esc(r.id)+'" role="button" aria-label="Enlarge photo"><img src="'+r.pic+'" alt=""></div>':'<div class="pav lockd">'+sil()+'</div>')+'<div><h2>'+esc(r.nick)+'</h2><div class="sub">'+esc(r.name)+(r.bib?' · #'+r.bib:'')+'</div></div></div></div>';
   h+='<div class="kv"><div><b>'+me.races+'</b><span>Races</span></div><div><b>'+me.w+'</b><span>Wins</span></div><div><b>'+me.pod+'</b><span>Podiums</span></div><div><b>'+me.top10+'</b><span>Top 10</span></div><div><b>'+(me.best?ord(me.best):"–")+'</b><span>Best finish</span></div><div><b>'+(me.races?(me.pts/me.races).toFixed(1):"–")+'</b><span>Pts / race</span></div></div>';
   if(me.bonus)h+='<div class="note" style="margin:-4px 2px 8px">🌏 Includes <b>+'+me.bonus+'</b> bonus points for racing outside Malaysia.</div>';
   var bd=badgesFor(me);if(me.races)h+='<div class="badges">'+bd.map(function(b){return '<span class="badge">'+b+'</span>';}).join("")+'</div>';
@@ -319,7 +340,7 @@ function render(){
   else if(tab==="admin"&&ADMIN)h=viewAdmin();
   else h=viewRules();
   v.innerHTML=h;
-  var T=[["board","Pole position",'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>'],["races","Races",'<path d="M4 21V4M4 5h13l-2 4 2 4H4"/>'],["riders","Riders",'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 5a3.2 3.2 0 0 1 0 6M18 14.8c1.8.6 3 2.2 3.5 5"/>'],["rules","Scoring",'<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/>']];
+  var T=[["board","Pole position",'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>'],["races","Races",'<path d="M4 21V4M4 5h13l-2 4 2 4H4"/>'],["riders","Riders",'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 5a3.2 3.2 0 0 1 0 6M18 14.8c1.8.6 3 2.2 3.5 5"/>']];
   T.push(["market","Marketplace",'<path d="M6 7h12l1 13H5L6 7z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/>']);
   if(ADMIN)T.push(["admin","Admin",'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']);
   $("tabs").style.gridTemplateColumns="repeat("+T.length+",1fr)";
@@ -698,43 +719,77 @@ document.addEventListener("keydown",function(e){
   else if(e.key==="Enter"&&e.target.tagName==="INPUT"&&e.target.type!=="file"&&e.target.type!=="checkbox"){var p=m.querySelector("[data-primary]");if(p){e.preventDefault();p.click();}}
 });
 /* ================= MARKETPLACE + rider photo picker ================= */
-var LSM="cpb_market_mine_v1",MINE=[];
+/* Shared marketplace store: Firebase Realtime Database over plain REST (no SDK).
+   Paste your database URL below, e.g. "https://your-project-default-rtdb.asia-southeast1.firebasedatabase.app" */
+var MK_DB="";
+var LSM="cpb_market_mine_v1",LSC="cpb_market_cache_v1",LSO="cpb_market_own_v1";
+var MINE=[],SHARED=[],OWN=[],mkLast=0,mkErr=false,mkBusy=false;
 try{MINE=JSON.parse(localStorage.getItem(LSM)||"[]");if(!Array.isArray(MINE))MINE=[];}catch(_){MINE=[];}
-function mkSave(mine){
-  if(mine){try{localStorage.setItem(LSM,JSON.stringify(MINE));return true;}catch(e){toast("Browser storage is full – remove a photo or an old listing");return false;}}
-  D.market=D.market||[];return save();
+try{SHARED=JSON.parse(localStorage.getItem(LSC)||"[]");if(!Array.isArray(SHARED))SHARED=[];}catch(_){SHARED=[];}
+try{OWN=JSON.parse(localStorage.getItem(LSO)||"[]");if(!Array.isArray(OWN))OWN=[];}catch(_){OWN=[];}
+function mkReady(){return/^https:\/\//.test(MK_DB);}
+function mkUrl(id){return MK_DB.replace(/\/+$/,"")+"/market"+(id?"/"+encodeURIComponent(id):"")+".json";}
+function mkCache(){try{localStorage.setItem(LSC,JSON.stringify(SHARED));}catch(_){}}
+function mkOwnSave(){try{localStorage.setItem(LSO,JSON.stringify(OWN));}catch(_){}}
+function mkIsOwn(id){return OWN.indexOf(id)>=0;}
+function mkAll(){return SHARED.slice().sort(function(a,b){return(b.ts||0)-(a.ts||0);});}
+function mkFind(id){for(var i=0;i<SHARED.length;i++)if(SHARED[i].id===id)return SHARED[i];return null;}
+function mkCan(x){return ADMIN||mkIsOwn(x.id);}
+function mkReq(method,id,body){
+  var o={method:method};if(body!==undefined){o.body=JSON.stringify(body);o.headers={"Content-Type":"application/json"};}
+  return fetch(mkUrl(id),o).then(function(r){if(!r.ok)throw new Error("http "+r.status);return r.json();});
 }
-function mkAll(){return(D.market||[]).map(function(x){return{x:x,mine:false};}).concat(MINE.map(function(x){return{x:x,mine:true};})).sort(function(a,b){return(b.x.ts||0)-(a.x.ts||0);});}
-function mkFind(id){var i,a=D.market||[];for(i=0;i<a.length;i++)if(a[i].id===id)return{x:a[i],mine:false};for(i=0;i<MINE.length;i++)if(MINE[i].id===id)return{x:MINE[i],mine:true};return null;}
+function mkFetch(force){
+  if(!mkReady()||mkBusy)return Promise.resolve();
+  if(!force&&Date.now()-mkLast<8000)return Promise.resolve();
+  mkBusy=true;mkLast=Date.now();
+  return mkReq("GET").then(function(o){
+    var list=o?Object.keys(o).filter(function(k){return o[k]&&typeof o[k]==="object";}).map(function(k){return Object.assign({},o[k],{id:k});}):[];
+    var changed=JSON.stringify(list)!==JSON.stringify(SHARED);mkErr=false;SHARED=list;mkCache();
+    return mkMigrate().then(function(){if((changed||mkErr)&&tab==="market")render();});
+  }).catch(function(){var was=mkErr;mkErr=true;if(!was&&tab==="market")render();}).then(function(){mkBusy=false;});
+}
+/* listings that were saved only on this device earlier are published automatically */
+function mkMigrate(){
+  if(!MINE.length)return Promise.resolve();
+  var todo=MINE.slice();
+  return Promise.all(todo.map(function(x){return mkReq("PUT",x.id,x).then(function(){OWN.push(x.id);SHARED.push(x);return x.id;}).catch(function(){return null;});})).then(function(done){
+    MINE=MINE.filter(function(x){return done.indexOf(x.id)<0;});
+    try{localStorage.setItem(LSM,JSON.stringify(MINE));}catch(_){}
+    mkOwnSave();mkCache();
+  });
+}
 function rm(n){return"RM "+Number(n).toLocaleString("en-MY",{maximumFractionDigits:2});}
 async function mkPhoto(blob){
-  var bm=await createImageBitmap(blob),s=Math.min(1,720/bm.width,720/bm.height),w=Math.max(1,Math.round(bm.width*s)),h=Math.max(1,Math.round(bm.height*s));
+  var bm=await createImageBitmap(blob),s=Math.min(1,640/bm.width,640/bm.height),w=Math.max(1,Math.round(bm.width*s)),h=Math.max(1,Math.round(bm.height*s));
   var c=document.createElement("canvas");c.width=w;c.height=h;var g=c.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,w,h);g.drawImage(bm,0,0,w,h);if(bm.close)bm.close();
-  return c.toDataURL("image/jpeg",0.8);
+  return c.toDataURL("image/jpeg",0.75);
 }
 var BOXICON='<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>';
 
 function viewMarket(){
+  mkFetch();
   var L=mkAll(),h='<div class="mkhead"><div><h3 style="margin:0">Marketplace</h3><div class="note">Buy and sell pushbike gear</div></div><button type="button" class="btn" style="width:auto;padding:12px 16px" data-act="mk-add">+ Sell an item</button></div>';
+  if(!mkReady()&&ADMIN)h+='<div class="card"><b>Marketplace server not connected</b><p class="note" style="margin:6px 0 0">Set <code>MK_DB</code> in the app file to your Firebase Realtime Database URL so listings are shared with everyone.</p></div>';
+  else if(mkErr)h+='<p class="note" style="margin:0 2px 10px;color:var(--hot)">Could not reach the marketplace. Showing the last loaded items.</p>';
   if(!L.length)h+='<div class="card empty">Nothing for sale yet.<br>Tap “Sell an item” to post the first one.</div>';
-  else h+='<div class="mkgrid">'+L.map(function(o){
-    var x=o.x;
-    return'<div class="mk" data-act="mk-open" data-id="'+esc(x.id)+'"><div class="mkimg">'+(x.photos&&x.photos[0]?'<img src="'+x.photos[0]+'" alt="">':BOXICON)+'</div><div class="mkb"><b class="mkp">'+esc(rm(x.price))+'</b><div class="mkt">'+esc(x.title)+'</div><div class="note">'+esc([x.brand,x.location].filter(Boolean).join(" · "))+'</div>'+(o.mine?'<span class="mkbadge">Only on this device</span>':'')+'</div></div>';
+  else h+='<div class="mkgrid">'+L.map(function(x){
+    return'<div class="mk" data-act="mk-open" data-id="'+esc(x.id)+'"><div class="mkimg">'+(x.photos&&x.photos[0]?'<img src="'+x.photos[0]+'" alt="">':BOXICON)+'</div><div class="mkb"><b class="mkp">'+esc(rm(x.price))+'</b><div class="mkt">'+esc(x.title)+'</div><div class="note">'+esc([x.brand,x.location].filter(Boolean).join(" · "))+'</div></div></div>';
   }).join("")+'</div>';
-  if(MINE.length)h+='<p class="note" style="margin:12px 2px">Items marked “Only on this device” are saved in this browser and are not yet visible to other people. Send them to the club admin to publish for everyone.</p>';
   return h;
 }
 function mkOpen(id){
-  var f=mkFind(id);if(!f)return;var x=f.x,ph=x.photos||[];
+  var x=mkFind(id);if(!x)return;var ph=x.photos||[];
   var wa=x.phone?'https://wa.me/'+x.phone+'?text='+encodeURIComponent("Hi, I'm interested in your "+x.title+" ("+rm(x.price)+") on the CorePushBike marketplace."):"";
   modal((ph.length?'<img class="mkmain" id="mk_main" src="'+ph[0]+'" alt="">'+(ph.length>1?'<div class="mkthumbs">'+ph.map(function(u,i){return'<button type="button" data-act="mk-thumb" data-i="'+i+'"><img src="'+u+'" alt=""></button>';}).join("")+'</div>':''):'<div class="mkimg" style="aspect-ratio:2/1;border-radius:14px">'+BOXICON+'</div>')
    +'<div class="mkprice">'+esc(rm(x.price))+'</div><h2 class="mh" style="margin:0 0 8px">'+esc(x.title)+'</h2>'
    +(x.brand?'<div class="mkrow"><span>Brand</span><b>'+esc(x.brand)+'</b></div>':'')
+   +(x.desc?'<div class="mkdesc"><span>Description</span><div>'+esc(x.desc)+'</div></div>':'')
    +'<div class="mkrow"><span>Location</span><b>'+esc(x.location)+'</b></div>'
    +(x.seller?'<div class="mkrow"><span>Seller</span><b>'+esc(x.seller)+'</b></div>':'')
    +(x.ts?'<div class="mkrow"><span>Posted</span><b>'+esc(new Date(x.ts).toLocaleDateString())+'</b></div>':'')
    +(wa?'<a class="btn" href="'+esc(wa)+'" target="_blank" rel="noopener">WhatsApp seller</a>':'')
-   +((f.mine||ADMIN)?'<div class="brow"><button type="button" class="btn s" data-act="mk-edit" data-id="'+esc(id)+'">Edit</button><button type="button" class="btn d" data-act="mk-del" data-id="'+esc(id)+'">Delete</button></div>':'')
+   +(mkCan(x)?'<div class="brow"><button type="button" class="btn s" data-act="mk-edit" data-id="'+esc(id)+'">Edit</button><button type="button" class="btn d" data-act="mk-del" data-id="'+esc(id)+'">Delete</button></div>':'')
    +'<button type="button" class="btn s" style="margin-top:10px" data-act="close">Close</button>');
 }
 var mkPics=[],mkEditId=null;
@@ -745,51 +800,162 @@ function mkStrip(){
   el.innerHTML=h;
 }
 function mkForm(id){
-  var f=id?mkFind(id):null,x=f?f.x:{title:"",brand:"",price:"",location:"",seller:"",phone:"",photos:[]};
+  if(!mkReady()){toast("Marketplace is not available right now");return;}
+  var x=id?mkFind(id):null;if(id&&!x)return;
+  x=x||{title:"",brand:"",desc:"",price:"",location:"",seller:"",phone:"",photos:[]};
   mkEditId=id||null;mkPics=(x.photos||[]).slice();
   var ph=x.phone&&x.phone.charAt(0)==="6"?"0"+x.phone.slice(2):(x.phone||"");
   modal('<h2 class="mh">'+(id?"Edit item":"Sell an item")+'</h2>'
    +'<div class="fl"><span>Photos (up to 3)</span><div id="mk_ph" class="mkph"></div></div>'
    +fld("Item name","mk_title",x.title,'placeholder="e.g. Strider 14X push bike"')
    +fld("Brand","mk_brand",x.brand,'placeholder="e.g. Strider"')
+   +'<label class="fl"><span>Description of item</span><textarea id="mk_desc" rows="3" maxlength="600" placeholder="Condition, size, age, what is included…">'+esc(x.desc||"")+'</textarea></label>'
    +fld("Price (RM)","mk_price",x.price,'inputmode="decimal" placeholder="e.g. 250"')
    +fld("Location","mk_loc",x.location,'placeholder="e.g. Kajang, Selangor"')
    +fld("Your name (optional)","mk_seller",x.seller)
    +fld("WhatsApp number (optional)","mk_phone",ph,'inputmode="tel" placeholder="e.g. 0123456789"')
-   +'<p class="note" style="margin:10px 0 0">'+(ADMIN?"As admin, this item is published to everyone when you download the updated app.":"This item is saved on this device. Send it to the club admin to publish it for everyone.")+'</p>'
    +'<div class="brow"><button type="button" class="btn s" data-act="close">Cancel</button><button type="button" class="btn" data-primary data-act="mk-save">'+(id?"Save":"Post item")+'</button></div>');
   mkStrip();
 }
-function mkSaveForm(){
+function mkSaveForm(btn){
   var title=$("mk_title").value.trim(),price=parseFloat(String($("mk_price").value).replace(/[^0-9.]/g,"")),loc=$("mk_loc").value.trim();
   if(!title){toast("Enter the item name");return;}
   if(!(price>=0)||isNaN(price)){toast("Enter the price");return;}
   if(!loc){toast("Enter the location");return;}
   var ph=($("mk_phone").value||"").replace(/\D/g,"");if(ph.charAt(0)==="0")ph="6"+ph;
-  var rec={title:title,brand:$("mk_brand").value.trim(),price:price,location:loc,seller:$("mk_seller").value.trim(),phone:ph,photos:mkPics.slice()},ok;
-  if(mkEditId){var f=mkFind(mkEditId);if(!f)return;Object.assign(f.x,rec);ok=mkSave(f.mine);}
-  else{
-    rec.id="m"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);rec.ts=Date.now();
-    if(ADMIN){D.market=D.market||[];D.market.push(rec);ok=mkSave(false);}
-    else{MINE.push(rec);ok=mkSave(true);if(!ok)MINE.pop();}
-  }
-  if(!ok)return;
-  closeModal();render();toast(mkEditId?"Item updated":"Item posted");
+  var rec={title:title,brand:$("mk_brand").value.trim(),desc:$("mk_desc").value.trim(),price:price,location:loc,seller:$("mk_seller").value.trim(),phone:ph,photos:mkPics.slice()};
+  var editing=mkEditId,old=editing?mkFind(editing):null;
+  if(editing&&!old)return;
+  if(editing){rec.id=old.id;rec.ts=old.ts||Date.now();}
+  else{rec.id="m"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);rec.ts=Date.now();}
+  if(btn){btn.disabled=true;btn.textContent="Publishing…";}
+  mkReq("PUT",rec.id,rec).then(function(){
+    var i,found=false;for(i=0;i<SHARED.length;i++)if(SHARED[i].id===rec.id){SHARED[i]=rec;found=true;}
+    if(!found){SHARED.push(rec);OWN.push(rec.id);mkOwnSave();}
+    mkCache();closeModal();render();toast(editing?"Item updated":"Item posted");
+  }).catch(function(){
+    if(btn){btn.disabled=false;btn.textContent=editing?"Save":"Post item";}
+    toast("Could not publish. Check your connection and try again");
+  });
 }
 document.addEventListener("click",function(e){
   var a=e.target.closest("[data-act]");if(!a)return;var act=a.dataset.act;if(act.indexOf("mk-")!==0)return;
   if(act==="mk-add")mkForm(null);
   else if(act==="mk-open")mkOpen(a.dataset.id);
   else if(act==="mk-thumb"){var m=$("mk_main"),im=a.querySelector("img");if(m&&im)m.src=im.src;}
-  else if(act==="mk-edit")mkForm(a.dataset.id);
+  else if(act==="mk-edit"){var fe=mkFind(a.dataset.id);if(fe&&mkCan(fe))mkForm(a.dataset.id);}
   else if(act==="mk-rm"){mkPics.splice(+a.dataset.i,1);mkStrip();}
-  else if(act==="mk-save")mkSaveForm();
+  else if(act==="mk-save")mkSaveForm(a);
   else if(act==="mk-del"){
-    var f=mkFind(a.dataset.id);if(!f||!(f.mine||ADMIN))return;if(!confirm("Delete this item?"))return;
-    if(f.mine){MINE=MINE.filter(function(y){return y.id!==f.x.id;});mkSave(true);}else{D.market=D.market.filter(function(y){return y.id!==f.x.id;});mkSave(false);}
-    closeModal();render();toast("Item deleted");
+    var f=mkFind(a.dataset.id);if(!f||!mkCan(f))return;if(!confirm("Delete this item for everyone?"))return;
+    mkReq("DELETE",f.id).then(function(){
+      SHARED=SHARED.filter(function(y){return y.id!==f.id;});OWN=OWN.filter(function(y){return y!==f.id;});mkOwnSave();mkCache();
+      closeModal();render();toast("Item deleted");
+    }).catch(function(){toast("Could not delete. Try again");});
   }
 });
+mkFetch(true);
+setInterval(function(){if(tab==="market"&&!document.hidden&&!document.querySelector("#modal.on"))mkFetch(true);},30000);
+
+/* ---- race events (calendar) ---- */
+/* Shared with everyone when MK_DB is set (stored under /events); otherwise kept in this browser only. */
+var LSE="cpb_events_cache_v1",EVSH=[],EVLAST=0,EVBUSY=false,EVERR=false;
+try{EVSH=JSON.parse(localStorage.getItem(LSE)||"[]");if(!Array.isArray(EVSH))EVSH=[];}catch(_){EVSH=[];}
+function evUrl(id){return MK_DB.replace(/\/+$/,"")+"/events"+(id?"/"+encodeURIComponent(id):"")+".json";}
+function evReq(method,id,body){
+  var o={method:method};if(body!==undefined){o.body=JSON.stringify(body);o.headers={"Content-Type":"application/json"};}
+  return fetch(evUrl(id),o).then(function(r){if(!r.ok)throw new Error("http "+r.status);return r.json();});
+}
+function evList(){return(mkReady()?EVSH:(D.events||[])).slice();}
+function evFind(id){var L=evList();for(var i=0;i<L.length;i++)if(L[i].id===id)return L[i];return null;}
+function evFetch(force){
+  if(!mkReady()||EVBUSY)return;
+  if(!force&&Date.now()-EVLAST<8000)return;
+  EVBUSY=true;EVLAST=Date.now();
+  evReq("GET").then(function(o){
+    var list=o?Object.keys(o).filter(function(k){return o[k]&&typeof o[k]==="object";}).map(function(k){return Object.assign({},o[k],{id:k});}):[];
+    var changed=JSON.stringify(list)!==JSON.stringify(EVSH)||EVERR;EVERR=false;EVSH=list;
+    try{localStorage.setItem(LSE,JSON.stringify(EVSH));}catch(_){}
+    if(changed&&tab==="races"&&!document.querySelector("#modal.on"))render();
+  }).catch(function(){var was=EVERR;EVERR=true;if(!was&&tab==="races"&&!document.querySelector("#modal.on"))render();}).then(function(){EVBUSY=false;});
+}
+function evToday(){var d=new Date();return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2);}
+function evCard(x,past){
+  var p=(x.date||"").split("-"),mon=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var dd=p.length===3?'<div class="evdw"><span class="evflag" aria-hidden="true">🏁</span><div class="evdate">'+parseInt(p[2],10)+'<small>'+mon[parseInt(p[1],10)-1]+' '+p[0]+'</small></div></div>':'';
+  return'<div class="evcard'+(past?' past':'')+'">'+dd+'<div style="flex:1;min-width:0"><div class="evn">'+esc(x.name)+'</div><div class="evl">📍 '+esc(x.location)+' · '+esc(fmtDate(x.date))+'</div></div>'
+   +(ADMIN?'<span style="display:flex;flex:none"><button type="button" class="ebtn" data-act="ev-edit" data-id="'+esc(x.id)+'">Edit</button><button type="button" class="ebtn" style="color:var(--hot)" data-act="ev-del" data-id="'+esc(x.id)+'">Delete</button></span>':'')+'</div>';
+}
+function viewEvents(){
+  evFetch();
+  var L=evList(),t=evToday();
+  var up=L.filter(function(x){return(x.date||"")>=t;}).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0;});
+  var past=L.filter(function(x){return(x.date||"")<t;}).sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0;});
+  var h='<div class="evhead" style="margin-top:14px"><h3 style="margin:0">Race events</h3>'+(ADMIN?'<button type="button" class="btn" style="width:auto;padding:10px 14px" data-act="ev-add">+ Add race event</button>':'')+'</div>';
+  if(ADMIN&&!mkReady())h+='<p class="note" style="margin:6px 2px 0">Marketplace server not connected yet, so events are saved on this device only.</p>';
+  else if(EVERR)h+='<p class="note" style="margin:6px 2px 0;color:var(--hot)">Could not reach the server. Showing the last loaded events.</p>';
+  if(!L.length)return h+'<div class="card empty" style="margin-top:8px">No race events yet.</div>';
+  if(up.length)h+='<div class="evsub">Upcoming</div><div class="card" style="overflow:hidden">'+up.map(function(x){return evCard(x,false);}).join("")+'</div>';
+  if(past.length)h+='<div class="evsub">Past events</div><div class="card" style="overflow:hidden">'+past.map(function(x){return evCard(x,true);}).join("")+'</div>';
+  return h;
+}
+var viewRaces0=viewRaces;
+viewRaces=function(){
+  var parts=viewRules().split('<h3>How the league works</h3>');
+  var pointsHtml=parts[0],rulesHtml=(parts[1]||"").split('<h3>Overseas races counted</h3>')[0];
+  return pointsHtml+(rulesHtml?'<details class="lg"><summary>How the league works</summary>'+rulesHtml+'</details>':'')+viewEvents()+'<div style="height:6px"></div>'+viewRaces0();
+};
+function evForm(id){
+  if(!ADMIN)return;
+  var x=id?evFind(id):null;if(id&&!x)return;
+  x=x||{name:"",date:"",location:""};
+  modal('<h2 class="mh">'+(id?"Edit race event":"Add race event")+'</h2>'
+   +fld("Name of the race","ev_name",x.name,'placeholder="e.g. Kejohanan Pushbike Selangor"')
+   +fld("Date","ev_date",x.date,'type="date"')
+   +fld("Location","ev_loc",x.location,'placeholder="e.g. Shah Alam, Selangor"')
+   +'<div class="brow"><button type="button" class="btn s" data-act="close">Cancel</button><button type="button" class="btn" data-primary data-act="ev-save" data-id="'+esc(id||"")+'">'+(id?"Save":"Add event")+'</button></div>');
+}
+function evSave(btn){
+  if(!ADMIN)return;
+  var name=$("ev_name").value.trim(),date=$("ev_date").value,loc=$("ev_loc").value.trim(),id=btn.dataset.id||"";
+  if(!name){toast("Enter the race name");return;}
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){toast("Pick the date");return;}
+  if(!loc){toast("Enter the location");return;}
+  var old=id?evFind(id):null;if(id&&!old)return;
+  var rec={id:id||"e"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:name,date:date,location:loc,ts:old?(old.ts||Date.now()):Date.now()};
+  function done(){closeModal();render();toast(id?"Event updated":"Event added");}
+  if(mkReady()){
+    btn.disabled=true;btn.textContent="Saving…";
+    evReq("PUT",rec.id,rec).then(function(){
+      var found=false;EVSH=EVSH.map(function(y){if(y.id===rec.id){found=true;return rec;}return y;});if(!found)EVSH.push(rec);
+      try{localStorage.setItem(LSE,JSON.stringify(EVSH));}catch(_){}
+      done();
+    }).catch(function(){btn.disabled=false;btn.textContent=id?"Save":"Add event";toast("Could not save. Check your connection");});
+  }else{
+    D.events=D.events||[];var f=false;D.events=D.events.map(function(y){if(y.id===rec.id){f=true;return rec;}return y;});if(!f)D.events.push(rec);
+    if(save())done();
+  }
+}
+document.addEventListener("click",function(e){
+  var a=e.target.closest("[data-act]");if(!a)return;var act=a.dataset.act;
+  if(act==="pic-zoom"){
+    var r=byId[a.dataset.id];if(!r||!r.pic)return;
+    modal('<img class="zoomimg" src="'+r.pic+'" alt="'+esc(r.nick)+'"><div style="text-align:center;font-weight:700;margin:10px 0 2px">'+esc(r.nick)+'</div><button type="button" class="btn s" style="margin-top:8px" data-act="close">Close</button>');
+    return;
+  }
+  if(act.indexOf("ev-")!==0)return;
+  if(act==="ev-add")evForm(null);
+  else if(act==="ev-edit")evForm(a.dataset.id);
+  else if(act==="ev-save")evSave(a);
+  else if(act==="ev-del"){
+    if(!ADMIN)return;var x=evFind(a.dataset.id);if(!x||!confirm("Delete “"+x.name+"”?"))return;
+    if(mkReady()){
+      evReq("DELETE",x.id).then(function(){EVSH=EVSH.filter(function(y){return y.id!==x.id;});try{localStorage.setItem(LSE,JSON.stringify(EVSH));}catch(_){}render();toast("Event deleted");}).catch(function(){toast("Could not delete. Try again");});
+    }else{D.events=(D.events||[]).filter(function(y){return y.id!==x.id;});if(save()){render();toast("Event deleted");}}
+  }
+});
+evFetch(true);
+setInterval(function(){if(tab==="races"&&!document.hidden&&!document.querySelector("#modal.on"))evFetch(true);},30000);
 
 /* ---- rider photo: pick an existing rider ---- */
 var lastQp=null;
