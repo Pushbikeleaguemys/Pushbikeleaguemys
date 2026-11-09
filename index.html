@@ -719,9 +719,9 @@ document.addEventListener("keydown",function(e){
   else if(e.key==="Enter"&&e.target.tagName==="INPUT"&&e.target.type!=="file"&&e.target.type!=="checkbox"){var p=m.querySelector("[data-primary]");if(p){e.preventDefault();p.click();}}
 });
 /* ================= MARKETPLACE + rider photo picker ================= */
-/* Shared marketplace store: Firebase Realtime Database over plain REST (no SDK).
-   Paste your database URL below, e.g. "https://your-project-default-rtdb.asia-southeast1.firebasedatabase.app" */
-var MK_DB="";
+/* Shared marketplace store: Google Apps Script web app (Google Sheet + Drive photos).
+   Paste your web app URL below, e.g. "https://script.google.com/macros/s/XXXX/exec" */
+var MK_DB="https://script.google.com/macros/s/AKfycbzpASg3w93J9zZh2YWd_6rHsoozg0EUCsiClXiNpJdw_QlIgLZjFWOx_gCdPnb2VcI/exec";
 var LSM="cpb_market_mine_v1",LSC="cpb_market_cache_v1",LSO="cpb_market_own_v1";
 var MINE=[],SHARED=[],OWN=[],mkLast=0,mkErr=false,mkBusy=false;
 try{MINE=JSON.parse(localStorage.getItem(LSM)||"[]");if(!Array.isArray(MINE))MINE=[];}catch(_){MINE=[];}
@@ -735,10 +735,17 @@ function mkIsOwn(id){return OWN.indexOf(id)>=0;}
 function mkAll(){return SHARED.slice().sort(function(a,b){return(b.ts||0)-(a.ts||0);});}
 function mkFind(id){for(var i=0;i<SHARED.length;i++)if(SHARED[i].id===id)return SHARED[i];return null;}
 function mkCan(x){return ADMIN||mkIsOwn(x.id);}
-function mkReq(method,id,body){
-  var o={method:method};if(body!==undefined){o.body=JSON.stringify(body);o.headers={"Content-Type":"application/json"};}
-  return fetch(mkUrl(id),o).then(function(r){if(!r.ok)throw new Error("http "+r.status);return r.json();});
+function mkToken(){var t="";try{t=localStorage.getItem("cpb_mk_token")||"";if(!t){t=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("cpb_mk_token",t);}}catch(_){t="anon"+Date.now();}return t;}
+function adminKey(){var k="";try{k=localStorage.getItem("cpb_akey")||"";if(!k){k=prompt("Enter the marketplace admin key (ADMIN_KEY in your Google script)")||"";if(k)localStorage.setItem("cpb_akey",k);}}catch(_){}return k;}
+function gPost(p){return fetch(MK_DB,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(p)}).then(function(r){if(!r.ok)throw new Error("http "+r.status);return r.json();}).then(function(j){if(j&&j.error){if(j.error==="forbidden"){try{localStorage.removeItem("cpb_akey");}catch(_){}}throw new Error(j.error);}return j;});}
+function mkUpPhotos(arr){var out=[],ch=Promise.resolve();(arr||[]).forEach(function(u){ch=ch.then(function(){if(String(u).indexOf("data:")!==0){out.push(u);return;}return gPost({action:"upload",data:u,token:mkToken()}).then(function(j){out.push(j.url);});});});return ch.then(function(){return out;});}
+function gApi(kind,method,id,body){
+  if(method==="GET")return fetch(MK_DB+(MK_DB.indexOf("?")<0?"?":"&")+"kind="+kind+"&t="+Date.now()).then(function(r){if(!r.ok)throw new Error("http "+r.status);return r.json();});
+  var pre=Promise.resolve();
+  if(method!=="DELETE"&&body&&body.photos&&body.photos.length)pre=mkUpPhotos(body.photos).then(function(u){body.photos=u;});
+  return pre.then(function(){var p={action:method==="DELETE"?"delete":"put",kind:kind,id:id,token:mkToken(),key:ADMIN?adminKey():""};if(body!==undefined)p.rec=body;return gPost(p);});
 }
+function mkReq(method,id,body){return gApi("market",method,id,body);}
 function mkFetch(force){
   if(!mkReady()||mkBusy)return Promise.resolve();
   if(!force&&Date.now()-mkLast<8000)return Promise.resolve();
@@ -770,7 +777,7 @@ var BOXICON='<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke=
 function viewMarket(){
   mkFetch();
   var L=mkAll(),h='<div class="mkhead"><div><h3 style="margin:0">Marketplace</h3><div class="note">Buy and sell pushbike gear</div></div><button type="button" class="btn" style="width:auto;padding:12px 16px" data-act="mk-add">+ Sell an item</button></div>';
-  if(!mkReady()&&ADMIN)h+='<div class="card"><b>Marketplace server not connected</b><p class="note" style="margin:6px 0 0">Set <code>MK_DB</code> in the app file to your Firebase Realtime Database URL so listings are shared with everyone.</p></div>';
+  if(!mkReady()&&ADMIN)h+='<div class="card"><b>Marketplace server not connected</b><p class="note" style="margin:6px 0 0">Set <code>MK_DB</code> in the app file to your Google Apps Script web app URL (see marketplace-backend.gs) so listings and photos are shared with everyone.</p></div>';
   else if(mkErr)h+='<p class="note" style="margin:0 2px 10px;color:var(--hot)">Could not reach the marketplace. Showing the last loaded items.</p>';
   if(!L.length)h+='<div class="card empty">Nothing for sale yet.<br>Tap “Sell an item” to post the first one.</div>';
   else h+='<div class="mkgrid">'+L.map(function(x){
@@ -862,10 +869,7 @@ setInterval(function(){if(tab==="market"&&!document.hidden&&!document.querySelec
 var LSE="cpb_events_cache_v1",EVSH=[],EVLAST=0,EVBUSY=false,EVERR=false;
 try{EVSH=JSON.parse(localStorage.getItem(LSE)||"[]");if(!Array.isArray(EVSH))EVSH=[];}catch(_){EVSH=[];}
 function evUrl(id){return MK_DB.replace(/\/+$/,"")+"/events"+(id?"/"+encodeURIComponent(id):"")+".json";}
-function evReq(method,id,body){
-  var o={method:method};if(body!==undefined){o.body=JSON.stringify(body);o.headers={"Content-Type":"application/json"};}
-  return fetch(evUrl(id),o).then(function(r){if(!r.ok)throw new Error("http "+r.status);return r.json();});
-}
+function evReq(method,id,body){return gApi("events",method,id,body);}
 function evList(){return(mkReady()?EVSH:(D.events||[])).slice();}
 function evFind(id){var L=evList();for(var i=0;i<L.length;i++)if(L[i].id===id)return L[i];return null;}
 function evFetch(force){
