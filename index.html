@@ -68,6 +68,7 @@ h3{margin:4px 2px 8px;font-size:13px;text-transform:uppercase;letter-spacing:.5p
 .btn{border:0;border-radius:12px;background:var(--lime);color:var(--lime-ink);font:inherit;font-weight:700;padding:12px 14px;min-height:46px;width:100%}
 .btn.s{background:var(--chip);color:var(--ink)}
 .kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.kv.k5{grid-template-columns:repeat(6,1fr)}.kv.k5 div:nth-child(-n+3){grid-column:span 2}.kv.k5 div:nth-child(n+4){grid-column:span 3}
 .kv div{background:var(--chip);border-radius:12px;padding:10px 6px;text-align:center}.kv b{display:block;font-size:20px}.kv span{font-size:11px;color:var(--muted)}
 .badges{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
 .badge{background:var(--chip);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
@@ -171,6 +172,27 @@ a.btn{display:block;text-align:center;text-decoration:none;margin-top:12px}
 .evhead{display:flex;justify-content:space-between;align-items:center;gap:10px}
 details.lg{margin:10px 0}details.lg>summary{cursor:pointer;font-weight:700;padding:12px 14px;background:var(--card);border-radius:14px;list-style:none}
 details.lg[open]>summary{border-radius:14px 14px 0 0}
+
+.evcarw{position:relative;margin:0 -12px}
+.evcar{position:relative;display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:14px calc(50% - min(72vw,270px)/2) 16px;overscroll-behavior-x:contain}
+.evcar::-webkit-scrollbar{display:none}
+.evk{flex:none;width:min(72vw,270px);scroll-snap-align:center;background:var(--card);border-radius:20px;padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.10);transition:transform .15s ease-out,opacity .15s ease-out;transform-origin:center;border-top:4px solid var(--lime)}
+.evk .evkd{display:flex;align-items:center;gap:12px}
+.evk .evbig{background:var(--hero);color:var(--lime);border-radius:14px;min-width:64px;padding:8px 6px;text-align:center;font-weight:800;font-size:28px;line-height:1}
+.evk .evbig small{display:block;font-size:11px;font-weight:700;color:#fff;opacity:.8;text-transform:uppercase;margin-top:4px}
+.evk .evwhen{font-size:12px;font-weight:800;color:var(--hot);text-transform:uppercase;letter-spacing:.4px}
+.evk .evn{font-weight:800;font-size:17px;margin:12px 0 6px;word-break:break-word;line-height:1.25}
+.evk .evl{color:var(--muted);font-size:13px}
+.evk .evadm{display:flex;gap:6px;margin-top:12px}
+.evk .evadm .ebtn{margin-left:0}
+.evnav{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:38px;height:38px;border-radius:50%;border:0;background:var(--lime);color:var(--lime-ink);font-size:22px;font-weight:800;line-height:1;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer}
+.evnav.p{left:6px}.evnav.n{right:6px}
+.evcnt{text-align:center;font-size:12px;font-weight:700;color:var(--muted);margin:-4px 0 6px}
+@media(max-width:480px){.evnav{display:none}}
+.pav.canup{position:relative}.pav.canup::after{content:"📷";position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:12px;line-height:1.5;background:rgba(0,0,0,.5)}
+.pp-prev{display:flex;justify-content:center;margin:6px 0 10px}
+.pp-prev img{max-height:220px;max-width:100%;border-radius:14px;background:var(--chip)}
+.pinbox{font-size:34px;font-weight:800;letter-spacing:.18em;text-align:center;padding:14px;background:var(--chip);border-radius:14px;margin:8px 0 6px}
 </style>
 </head>
 <body>
@@ -188,24 +210,51 @@ details.lg[open]>summary{border-radius:14px 14px 0 0}
 (function(){
 "use strict";
 var LSK="cpb_league_data_v1";
-var D=JSON.parse(document.getElementById("seed").textContent);
-(function(){try{var s=localStorage.getItem(LSK);if(s){var o=JSON.parse(s);if(o&&Array.isArray(o.riders)&&Array.isArray(o.results)&&(o.updated||0)>(D.updated||0))D=o;}}catch(_){}})();
+var D=migrate(JSON.parse(document.getElementById("seed").textContent));
+(function(){try{var s=localStorage.getItem(LSK);if(s){var o=JSON.parse(s);if(o&&Array.isArray(o.riders)&&Array.isArray(o.results)&&(o.updated||0)>(D.updated||0))D=migrate(o);}}catch(_){}})();
+var LEAGUE_YEAR=2026,MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+/* Age-range categories (e.g. "5 - 9 Tahun", "6-7 TAHUN", "4-6 TAHUN OPEN") are treated as OPEN,
+   and their points count under the rider's own year of birth. Month ranges like 3.1-3.6 are not affected. */
+function isRangeCat(cat){cat=String(cat==null?"":cat);if(/\b(?:19|20)\d\d\b/.test(cat))return false;
+  var m=cat.match(/(^|[^\d.])(\d{1,2})\s*(?:-|–|—|to)\s*(\d{1,2})(?![\d.])/i);
+  return !!m&&parseInt(m[2],10)<parseInt(m[3],10)&&parseInt(m[3],10)<=19;}
+function gkey(x){
+  if(x.grp==null&&x.rng){var rr=byId&&byId[x.rid];return(rr&&rr.born)?rr.born*10:null;}
+  return x.grp==null?null:x.grp*10+(x.half||0);}
+function gLabel(k){var b=Math.floor(k/10),h=k%10;return ""+b+(h===1?" · Jan–Jun":h===2?" · Jul–Dec":"");}
+function migrate(o){
+  if(!o||o.v>=2)return o;
+  (o.results||[]).forEach(function(x){
+    var yr=x.date?parseInt(x.date.slice(0,4),10):2026;
+    if(x.grp!=null&&x.grp<100)x.grp=yr-x.grp;
+    if(!x.mode)x.mode=/\d\.\d/.test(String(x.cat||""))?"month":"year";
+  });
+  var by={};
+  (o.results||[]).forEach(function(x){if(x.grp!=null&&!isRangeCat(x.cat)){(by[x.rid]=by[x.rid]||{})[x.grp]=(by[x.rid][x.grp]||0)+1;}});
+  (o.riders||[]).forEach(function(r){
+    if(r.born==null&&by[r.id]){var best=null,n=0;Object.keys(by[r.id]).forEach(function(g){if(by[r.id][g]>n){n=by[r.id][g];best=parseInt(g,10);}});if(best){r.born=best;r.bi=1;}}
+  });
+  o.v=2;return o;
+}
 var RIDERS,RES,byId,GROUPS;
 function syncData(){
   RIDERS=D.riders;RES=D.results;byId={};RIDERS.forEach(function(r){byId[r.id]=r;});
-  GROUPS=[];RES.forEach(function(x){if(x.grp!=null&&GROUPS.indexOf(x.grp)<0)GROUPS.push(x.grp);});GROUPS.sort(function(a,b){return a-b;});
+  RES.forEach(function(x){if(isRangeCat(x.cat)){x.grp=null;x.half=0;x.rng=true;}else if(x.rng)x.rng=false;});
+  GROUPS=[];RES.forEach(function(x){var k=gkey(x);if(k!=null&&GROUPS.indexOf(k)<0)GROUPS.push(k);});GROUPS.sort(function(a,b){return b-a;});
 }
 var PTS={1:10,2:8,3:6,4:4,5:2};            // 6th to 12th = 1 point
 var NOV={1:6,2:5,3:4,4:3,5:2,6:1};            // novice level: 1st to 6th only
 function pts(p,lvl){if(p==null)return 0;if(lvl==="novice")return NOV[p]||0;if(PTS[p])return PTS[p];return(p>=6&&p<=12)?1:0;}
-var BONUS=2;                                  // extra points for racing outside Malaysia
-function score(x){return pts(x.place,x.lvl)+(x.ovs?BONUS:0);}
+var BONUS=5;                                  // extra points for racing outside Malaysia
+var PENALTY=1;                                // -1 per race entered outside the rider's own year of birth
+function offYear(x){var r=byId[x.rid];return !!(r&&r.born&&x.grp!=null&&x.grp!==r.born);}
+function score(x){var p=pts(x.place,x.lvl)+(x.ovs?BONUS:0);if(offYear(x))p=Math.max(0,p-PENALTY);return p;}
 function $(id){return document.getElementById(id);}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
 function ord(n){var s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
-function avatar(r){return r.pic?'<div class="av pic"><img src="'+r.pic+'" alt=""></div>':'<div class="av">'+esc(ini(r.nick))+'</div>';}
+function avatar(r){return picOf(r)?'<div class="av pic"><img src="'+picOf(r)+'" alt=""></div>':'<div class="av">'+esc(ini(r.nick))+'</div>';}
 function sil(){return '<svg class="sil" viewBox="0 0 100 120" aria-hidden="true"><g fill="currentColor"><path d="M27 42A23 23 0 0 1 73 42V47H27Z"/><ellipse cx="50" cy="55" rx="15" ry="12"/><rect x="43" y="64" width="14" height="14" rx="4"/><path d="M8 120C8 94 28 80 50 80C72 80 92 94 92 120Z"/></g></svg>';}
-function photo(r,h){return r.pic?'<img class="cut" style="height:'+h+'px" src="'+r.pic+'" alt="">':'<div class="locked" style="height:'+h+'px">'+sil()+'</div>';}
+function photo(r,h){return picOf(r)?'<img class="cut" style="height:'+h+'px" src="'+picOf(r)+'" alt="">':'<div class="locked" style="height:'+h+'px">'+sil()+'</div>';}
 function ini(n){var p=String(n).trim().split(/\s+/);return((p[0]||"")[0]||"")+((p[1]||"")[0]||"");}
 function fmtDate(d){if(!d)return"Date not recorded";var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],p=d.split("-");return parseInt(p[2],10)+" "+m[parseInt(p[1],10)-1]+" "+p[0];}
 function toast(t){var e=$("toast");e.textContent=t;e.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(function(){e.classList.remove("show");},2200);}
@@ -217,7 +266,7 @@ function standings(group){
   var m={};
   RIDERS.forEach(function(r){m[r.id]={r:r,pts:0,bonus:0,races:0,w:0,p2:0,p3:0,pod:0,top10:0,best:null};});
   RES.forEach(function(x){
-    if(group!=null&&x.grp!==group)return;
+    if(group!=null&&gkey(x)!==group)return;
     var s=m[x.rid];if(!s)return;
     s.races++;s.pts+=score(x);if(x.ovs)s.bonus+=BONUS;
     if(x.place===1)s.w++;if(x.place===2)s.p2++;if(x.place===3)s.p3++;
@@ -238,8 +287,6 @@ function standings(group){
 }
 function badgesFor(s){
   var b=[];
-  if(s.w>=1)b.push("🥇 Race winner");
-  if(s.w>=5)b.push("🔥 5+ wins");
   if(s.pod>=10)b.push("🏆 10+ podiums");
   if(s.races>=20)b.push("🚴 20+ races");
   if(s.pts>=100)b.push("⭐ 100+ points");
@@ -259,29 +306,29 @@ function renderHeaderStats(){
 function pill(label,on,attr){return '<button class="pill'+(on?' on':'')+'" '+attr+'>'+label+'</button>';}
 function viewBoard(){
   var list=standings(grp),ranked=list.filter(function(s){return s.races>0;}),unr=list.filter(function(s){return s.races===0;});
-  var h='<div class="seg">'+pill("Overall",grp==null,'data-g="all"')+GROUPS.map(function(g){return pill(g+" Tahun",grp===g,'data-g="'+g+'"');}).join("")+'</div>';
+  var h='<div class="seg">'+pill("Overall",grp==null,'data-g="all"')+GROUPS.map(function(g){return pill(gLabel(g),grp===g,'data-g="'+g+'"');}).join("")+'</div>';
   if(ranked.length){
     var t=ranked[0];
-    h+='<div class="pole"><span class="tag">POLE POSITION</span><div class="pts"><b>'+t.pts+'</b><span>POINTS</span></div><div class="prow">'+(t.r.pic?'<div class="pav"><img src="'+t.r.pic+'" alt=""></div>':'<div class="pav lockd">'+sil()+'</div>')+'<div><h2>'+esc(t.r.nick)+'</h2><div class="sub">'+(grp==null?"Overall 2026":grp+" Tahun")+' · '+t.w+' wins · '+t.pod+' podiums · '+t.races+' races</div></div></div></div>';
+    h+='<div class="pole"><span class="tag">POLE POSITION</span><div class="pts"><b>'+t.pts+'</b><span>POINTS</span></div><div class="prow">'+(picOf(t.r)?'<div class="pav"><img src="'+picOf(t.r)+'" alt=""></div>':'<div class="pav lockd">'+sil()+'</div>')+'<div><h2>'+esc(t.r.nick)+'</h2><div class="sub">'+(grp==null?"Overall 2026":gLabel(grp))+' · '+t.pod+' podiums · '+t.races+' races</div></div></div></div>';
     if(ranked.length>=3){
       var o=[ranked[1],ranked[0],ranked[2]],cl=["p2","p1","p3"],mj=["🥈","🥇","🥉"];
       h+='<div class="podium">'+o.map(function(s,i){return '<div class="pod '+cl[i]+'" data-r="'+s.r.id+'"><div class="ph">'+photo(s.r,i===1?132:104)+'<span class="mb">'+mj[i]+'</span></div><div class="n">'+esc(s.r.nick)+'</div><b>'+s.pts+'</b><div class="s">'+(s.r.pic?'pts':'pts')+'</div></div>';}).join("")+'</div>';
     }
-    h+='<h3>'+(grp==null?"Overall standings":grp+" Tahun standings")+'</h3><div class="card">'+ranked.map(rowHtml).join("")+'</div>';
+    h+='<h3>'+(grp==null?"Overall standings":gLabel(grp)+" standings")+'</h3><div class="card">'+ranked.map(rowHtml).join("")+'</div>';
   }else h+='<div class="card empty">No race results in this group yet.</div>';
   if(grp==null&&unr.length)h+='<h3>No race results yet ('+unr.length+')</h3><div class="card">'+unr.map(function(s){return '<div class="row" data-r="'+s.r.id+'"><div class="rk">–</div>'+avatar(s.r)+'<div class="mid"><b>'+esc(s.r.nick)+'</b><span>Registered rider</span></div><div class="pt"><b>0</b><span>pts</span></div></div>';}).join("")+'</div>';
   return h;
 }
 function rowHtml(s){
   var rc=s.rank<=3?" r"+s.rank:"";
-  return '<div class="row" data-r="'+s.r.id+'"><div class="rk'+rc+'">'+s.rank+'</div>'+avatar(s.r)+'<div class="mid"><b>'+esc(s.r.nick)+'</b><span>'+s.races+' races · '+s.w+' wins · '+s.pod+' podiums'+(s.r.bib?' · #'+s.r.bib:'')+'</span></div><div class="pt"><b>'+s.pts+'</b><span>pts</span></div></div>';
+  return '<div class="row" data-r="'+s.r.id+'"><div class="rk'+rc+'">'+s.rank+'</div>'+avatar(s.r)+'<div class="mid"><b>'+esc(s.r.nick)+'</b><span>'+s.races+' races · '+s.pod+' podiums'+(s.r.bib?' · #'+s.r.bib:'')+'</span></div><div class="pt"><b>'+s.pts+'</b><span>pts</span></div></div>';
 }
 function lvlTag(x){if(!x.tag)return"";var w=x.tag.split(" ")[0];return w.charAt(0)+w.slice(1).toLowerCase();}
 function medalCls(p){return p===1?"m1":p===2?"m2":p===3?"m3":(p&&p<=12)?"mp":"";}
 function resItem(x,showRider){
   var p=x.place,pt=score(x),label=p?ord(p):"–",sub=p?"":(x.status||"No placing");
   var r=byId[x.rid];
-  return '<div class="fi"><div class="medal '+medalCls(p)+'">'+label+'</div><div><div class="t">'+(showRider?esc(r?r.nick:x.rid):esc(x.event))+'</div><div class="d">'+(showRider?esc(x.cat)+(sub?' · '+esc(sub):''):esc(fmtDate(x.date))+' · '+esc(x.cat)+(sub?' · '+esc(sub):''))+(lvlTag(x)?' · '+lvlTag(x):'')+(x.ovs?' · 🌏 '+esc(x.country):'')+'</div></div><div class="g"><b>+'+pt+'</b><span>'+(x.ovs?'incl. +'+BONUS+' 🌏':(x.lvl==="novice"?'novice pts':'pts'))+'</span></div></div>';
+  return '<div class="fi"><div class="medal '+medalCls(p)+'">'+label+'</div><div><div class="t">'+(showRider?esc(r?r.nick:x.rid):esc(x.event))+'</div><div class="d">'+(showRider?esc(x.cat)+(sub?' · '+esc(sub):''):esc(fmtDate(x.date))+' · '+esc(x.cat)+(sub?' · '+esc(sub):''))+(x.rng?' · open (age range)':'')+(lvlTag(x)?' · '+lvlTag(x):'')+(x.ovs?' · 🌏 '+esc(x.country):'')+'</div></div><div class="g"><b>+'+pt+'</b><span>'+(x.ovs?'incl. +'+BONUS+' 🌏':(x.lvl==="novice"?'novice pts':'pts'))+'</span></div></div>';
 }
 function viewRaces(){
   var ev={},keys=[];
@@ -304,12 +351,12 @@ function viewProfile(id){
   var r=byId[id],all=standings(null),me=all.filter(function(s){return s.r.id===id;})[0];
   var mine=RES.filter(function(x){return x.rid===id;});
   var h='<button class="back" id="back" type="button">‹ Back</button>';
-  h+='<div class="pole"><span class="tag">'+(me.rank?"OVERALL "+ord(me.rank):"NO RESULTS YET")+'</span><div class="pts"><b>'+me.pts+'</b><span>POINTS</span></div><div class="prow">'+(r.pic?'<div class="pav zoom" data-act="pic-zoom" data-id="'+esc(r.id)+'" role="button" aria-label="Enlarge photo"><img src="'+r.pic+'" alt=""></div>':'<div class="pav lockd">'+sil()+'</div>')+'<div><h2>'+esc(r.nick)+'</h2><div class="sub">'+esc(r.name)+(r.bib?' · #'+r.bib:'')+'</div></div></div></div>';
-  h+='<div class="kv"><div><b>'+me.races+'</b><span>Races</span></div><div><b>'+me.w+'</b><span>Wins</span></div><div><b>'+me.pod+'</b><span>Podiums</span></div><div><b>'+me.top10+'</b><span>Top 10</span></div><div><b>'+(me.best?ord(me.best):"–")+'</b><span>Best finish</span></div><div><b>'+(me.races?(me.pts/me.races).toFixed(1):"–")+'</b><span>Pts / race</span></div></div>';
+  h+='<div class="pole"><span class="tag">'+(me.rank?"OVERALL "+ord(me.rank):"NO RESULTS YET")+'</span><div class="pts"><b>'+me.pts+'</b><span>POINTS</span></div><div class="prow">'+(picOf(r)?'<div class="pav zoom" data-act="pic-zoom" data-id="'+esc(r.id)+'" role="button" aria-label="Enlarge photo"><img src="'+picOf(r)+'" alt=""></div>':'<div class="pav lockd">'+sil()+'</div>')+'<div><h2>'+esc(r.nick)+'</h2><div class="sub">'+esc(r.name)+(r.bib?' · #'+r.bib:'')+(r.born?' · '+(r.bm?MN[r.bm-1]+' ':'')+r.born+(r.bi?' (est.)':''):'')+'</div></div></div></div>';
+  h+='<div class="kv k5"><div><b>'+me.races+'</b><span>Races</span></div><div><b>'+me.pod+'</b><span>Podiums</span></div><div><b>'+me.top10+'</b><span>Top 10</span></div><div><b>'+(me.best?ord(me.best):"–")+'</b><span>Best finish</span></div><div><b>'+(me.races?(me.pts/me.races).toFixed(1):"–")+'</b><span>Pts / race</span></div></div>';
   if(me.bonus)h+='<div class="note" style="margin:-4px 2px 8px">🌏 Includes <b>+'+me.bonus+'</b> bonus points for racing outside Malaysia.</div>';
   var bd=badgesFor(me);if(me.races)h+='<div class="badges">'+bd.map(function(b){return '<span class="badge">'+b+'</span>';}).join("")+'</div>';
-  var gs=[];mine.forEach(function(x){if(x.grp!=null&&gs.indexOf(x.grp)<0)gs.push(x.grp);});gs.sort();
-  if(gs.length){h+='<h3 style="margin-top:14px">Age groups</h3><div class="card">'+gs.map(function(g){var st=standings(g).filter(function(s){return s.r.id===id;})[0],n=standings(g).length;return '<div class="row" data-g="'+g+'"><div class="rk r'+(st.rank<=3?st.rank:"")+'">'+st.rank+'</div><div class="mid"><b>'+g+' Tahun</b><span>'+st.races+' races · '+st.w+' wins · out of '+n+' riders</span></div><div class="pt"><b>'+st.pts+'</b><span>pts</span></div></div>';}).join("")+'</div>';}
+  var gs=[];mine.forEach(function(x){var k=gkey(x);if(k!=null&&gs.indexOf(k)<0)gs.push(k);});gs.sort(function(a,b){return b-a;});
+  if(gs.length){h+='<h3 style="margin-top:14px">Year-of-birth groups</h3><div class="card">'+gs.map(function(g){var st=standings(g).filter(function(s){return s.r.id===id;})[0],n=standings(g).length;return '<div class="row" data-g="'+g+'"><div class="rk r'+(st.rank<=3?st.rank:"")+'">'+st.rank+'</div><div class="mid"><b>'+gLabel(g)+'</b><span>'+st.races+' races · out of '+n+' riders</span></div><div class="pt"><b>'+st.pts+'</b><span>pts</span></div></div>';}).join("")+'</div>';}
   var mo=[0,0,0,0,0,0,0,0,0,0,0,0],dated=0;mine.forEach(function(x){if(x.date){mo[parseInt(x.date.slice(5,7),10)-1]+=score(x);dated++;}});
   if(dated){var mx=Math.max.apply(null,mo)||1,ml=["J","F","M","A","M","J","J","A","S","O","N","D"];
     h+='<h3>Points by month</h3><div class="card"><div class="bars">'+mo.map(function(v){return '<div style="height:'+Math.max(3,Math.round(v/mx*100))+'%">'+(v?'<i>'+v+'</i>':'')+'</div>';}).join("")+'</div><div class="mlab">'+ml.map(function(l){return '<span>'+l+'</span>';}).join("")+'</div></div>';}
@@ -320,13 +367,13 @@ function viewProfile(id){
 function viewRules(){
   var undated=RES.filter(function(x){return!x.date;}).length,nop=RES.filter(function(x){return x.place==null;}).length;
   var nNov=RES.filter(function(x){return x.lvl==="novice";}).length,nRook=RES.filter(function(x){return x.tag==="ROOKIE";}).length;
-  var filled=RES.filter(function(x){return x.countrySource;}).length,openCat=RES.filter(function(x){return x.grp==null;}).length;
+  var filled=RES.filter(function(x){return x.countrySource;}).length,openCat=RES.filter(function(x){return x.grp==null&&!x.rng;}).length,rngCat=RES.filter(function(x){return x.rng;}).length;
   var oe={};RES.forEach(function(x){if(x.ovs){var k=x.country;(oe[k]=oe[k]||{});oe[k][x.event]=(oe[k][x.event]||0)+1;}});
   var ovsList=Object.keys(oe).sort().map(function(c){var tot=0,names=Object.keys(oe[c]).map(function(e){tot+=oe[c][e];return esc(e);});return '<li><b>'+esc(c)+'</b> ('+tot+' results): '+names.join(", ")+'</li>';}).join("")||'<li>None yet.</li>';
   return '<h3>Points system</h3><div class="card"><table class="sc"><tr><th>Finish</th><th>Expert / standard</th><th>Novice</th></tr><tr><td>🥇 1st</td><td><b>10</b></td><td><b>6</b></td></tr><tr><td>🥈 2nd</td><td><b>8</b></td><td><b>5</b></td></tr><tr><td>🥉 3rd</td><td><b>6</b></td><td><b>4</b></td></tr><tr><td>4th</td><td><b>4</b></td><td><b>3</b></td></tr><tr><td>5th</td><td><b>2</b></td><td><b>2</b></td></tr><tr><td>6th</td><td><b>1</b></td><td><b>1</b></td></tr><tr><td>7th to 12th</td><td><b>1</b></td><td>0</td></tr><tr><td>13th and below</td><td>0</td><td>0</td></tr><tr><td>🌏 Race outside Malaysia</td><td colspan="2"><b>+'+BONUS+'</b> extra per race (both levels)</td></tr></table></div>'+
-  '<h3>How the league works</h3><div class="card"><ul class="note" style="padding-left:18px;margin:0"><li><b>Overall pole position</b> = total points from every 2026 race result, for all riders.</li><li><b>Levels:</b> a result scores with the <b>Novice</b> points when the tracker says NOVICE in the position or in the category (for example “P2 NOVICE” or “4-6 Tahun Open Novice”). Expert, Pro, Elite, Master, or no level stated all use the standard points.</li><li><b>Overseas bonus:</b> every race result outside Malaysia earns +'+BONUS+' points on top of the finishing points, even when there is no final placing.</li><li><b>Age groups</b> (the Tahun tabs) use the age category each race was entered in. A rider moves between groups as they age, so they can appear in more than one.</li><li><b>Tie-breaks:</b> more wins, then more podiums, then fewer races.</li><li>Every row in your Race &amp; Events sheet counts as one result, including each day and each class of an event.</li></ul></div>'+
+  '<h3>How the league works</h3><div class="card"><ul class="note" style="padding-left:18px;margin:0"><li><b>Overall pole position</b> = total points from every 2026 race result, for all riders.</li><li><b>Levels:</b> a result scores with the <b>Novice</b> points when the tracker says NOVICE in the position or in the category (for example “P2 NOVICE” or “4-6 Tahun Open Novice”). Expert, Pro, Elite, Master, or no level stated all use the standard points.</li><li><b>Outside own year of birth:</b> a result entered in a category that is not the rider’s own year of birth loses 1 point (never below 0).</li><li><b>Overseas bonus:</b> every race result outside Malaysia earns +'+BONUS+' points on top of the finishing points, even when there is no final placing.</li><li><b>Year-of-birth groups</b> (the “Born” tabs) use the category each race was entered in. <b>By year</b> races: only riders born in that year. <b>By month</b> races split a year into Jan–Jun and Jul–Dec categories; a rider born one year earlier may still enter the younger category until their birthday in the race year, after that they can no longer join it..</li><li><b>Tie-breaks:</b> more wins, then more podiums, then fewer races.</li><li>Every row in your Race &amp; Events sheet counts as one result, including each day and each class of an event.</li></ul></div>'+
   '<h3>Overseas races counted</h3><div class="card"><ul class="note" style="padding-left:18px;margin:0">'+ovsList+'</ul></div>'+
-  '<h3>Data notes</h3><div class="card"><ul class="note" style="padding-left:18px;margin:0"><li>'+nop+' results have no final placing (semi final, quarter final, repechage, Class B, RPC, DNF or blank) and score 0 finishing points. Tell me the final position and I will update them.</li><li>'+undated+' results have no date in the tracker, so they show as “Date not recorded” and are left out of the monthly chart.</li><li>'+filled+' overseas results had no country typed in the tracker. I copied the country from the same event typed for another rider. Please fill the Country column to make this exact.</li><li>'+openCat+' results are in “OPEN” categories with no age. They count toward the overall pole position but not toward an age group.</li><li>'+nNov+' results use the novice points. '+nRook+' results are labelled ROOKIE; the tracker does not say novice, so they use the standard points. Tell me if rookie should count as novice.</li><li>Rider photos come from the Rider Picture column of the Master Rider List. Riders without a photo show a locked silhouette.</li><li>Event names were tidied so the same race typed differently is grouped together.</li></ul></div>';
+  '<h3>Data notes</h3><div class="card"><ul class="note" style="padding-left:18px;margin:0"><li>'+nop+' results have no final placing (semi final, quarter final, repechage, Class B, RPC, DNF or blank) and score 0 finishing points. Tell me the final position and I will update them.</li><li>'+undated+' results have no date in the tracker, so they show as “Date not recorded” and are left out of the monthly chart.</li><li>'+filled+' overseas results had no country typed in the tracker. I copied the country from the same event typed for another rider. Please fill the Country column to make this exact.</li><li>'+rngCat+' results are in age-range categories (e.g. 5 - 9 Tahun). They are treated as open and count under each rider’s own year of birth, with no off-year deduction.</li><li>'+openCat+' results are in “OPEN” categories with no age. They count toward the overall pole position but not toward an age group.</li><li>'+nNov+' results use the novice points. '+nRook+' results are labelled ROOKIE; the tracker does not say novice, so they use the standard points. Tell me if rookie should count as novice.</li><li>Rider photos come from the Rider Picture column of the Master Rider List. Riders without a photo show a locked silhouette.</li><li>Event names were tidied so the same race typed differently is grouped together.</li></ul></div>';
 }
 
 function render(){
@@ -358,7 +405,7 @@ document.addEventListener("click",function(e){
 });
 async function copyBoard(){
   var l=standings(grp).filter(function(s){return s.races>0;}),m=["🥇","🥈","🥉"];
-  var t="*COREPUSHBIKE LEAGUE 2026*\n"+(grp==null?"Overall pole position":grp+" Tahun")+"\n\n"+l.map(function(s){return(m[s.rank-1]||s.rank+".")+" "+s.r.nick+" – "+s.pts+" pts ("+s.w+" wins, "+s.races+" races)";}).join("\n");
+  var t="*COREPUSHBIKE LEAGUE 2026*\n"+(grp==null?"Overall pole position":gLabel(grp))+"\n\n"+l.map(function(s){return(m[s.rank-1]||s.rank+".")+" "+s.r.nick+" – "+s.pts+" pts ("+s.races+" races)";}).join("\n");
   try{await navigator.clipboard.writeText(t);toast("Copied – paste into WhatsApp");return;}catch(e){}
   var ta=document.createElement("textarea");ta.value=t;ta.style.cssText="position:fixed;opacity:0;top:0";document.body.appendChild(ta);ta.focus();ta.select();var ok=false;try{ok=document.execCommand("copy");}catch(_){}ta.remove();
   toast(ok?"Copied – paste into WhatsApp":"Copy blocked here");
@@ -395,9 +442,15 @@ function nextRiderId(){var m=0;RIDERS.forEach(function(r){var n=parseInt(String(
 function normKey(s){return String(s==null?"":s).toLowerCase().replace(/[^a-z0-9]+/g," ").trim();}
 
 /* ---- derive result fields from category + position text ---- */
-function derive(cat,raw,country){
+function derive(cat,raw,country,date,mode){
   cat=String(cat==null?"":cat).trim();raw=String(raw==null?"":raw).trim();country=String(country==null?"":country).trim();
-  var gm=cat.match(/^\s*(\d+)/),grp=(gm&&!/^open/i.test(cat))?parseInt(gm[1],10):null;
+  var yr=date?parseInt(String(date).slice(0,4),10):LEAGUE_YEAR,grp=null,half=0;
+  var ym=cat.match(/\b((?:19|20)\d\d)\b/);
+  if(ym&&!/^open/i.test(cat)){grp=parseInt(ym[1],10);
+    if(/jan\w*\s*[-–to]+\s*jun|\bh1\b|1st\s*half/i.test(cat))half=1;else if(/jul\w*\s*[-–to]+\s*dec|\bh2\b|2nd\s*half/i.test(cat))half=2;}
+  else{var gm=cat.match(/^\s*(\d+)/);if(gm&&!/^open/i.test(cat))grp=yr-parseInt(gm[1],10);}
+  var rng=isRangeCat(cat);if(rng){grp=null;half=0;}
+  var md=mode||((half||/\d\.\d/.test(cat))?"month":"year");
   var pm=raw.match(/grand\s*final\D*?P?\s*(\d+)/i)||raw.match(/^P?\s*(\d+)\b/i),place=pm?parseInt(pm[1],10):null;
   var nov=/novice/i.test(raw)||/novice/i.test(cat),tag="";
   if(/novice/i.test(raw))tag="NOVICE";else if(/novice/i.test(cat))tag="NOVICE (category)";
@@ -408,7 +461,7 @@ function derive(cat,raw,country){
     else if(/class\s*b/i.test(raw))status="Class B";else if(/semi/i.test(raw))status="Semi final";else if(/quarter/i.test(raw))status="Quarter final";
     else if(/repech/i.test(raw))status="Repechage";else if(/selection/i.test(raw))status="Selection final";else status=raw;
   }
-  return{cat:cat,grp:grp,raw:raw,place:place,status:status,lvl:nov?"novice":"std",tag:tag,country:country,ovs:!!country&&!/^malaysia$/i.test(country)};
+  return{cat:cat,grp:grp,rng:rng,half:half||0,mode:md,raw:raw,place:place,status:status,lvl:nov?"novice":"std",tag:tag,country:country,ovs:!!country&&!/^malaysia$/i.test(country)};
 }
 var MON={jan:1,feb:2,mar:3,apr:4,may:5,mei:5,jun:6,jul:7,aug:8,ogo:8,sep:9,oct:10,okt:10,nov:11,dec:12,dis:12};
 function parseDate(v){
@@ -551,12 +604,30 @@ function buildImport(p){
   p.races.forEach(function(x){
     if(!byi[x.rid]){skipped++;return;}
     var k=normKey(x.event),ev=al[k];if(!ev){ev=x.event;if(ev)newNames[ev]=1;}
-    var d=derive(x.cat,x.raw,x.country);
+    var d=derive(x.cat,x.raw,x.country,x.date);
     res.push(Object.assign({row:x.row,rid:x.rid,date:x.date,event:ev||"(no event name)"},d));
   });
   var evc={};res.forEach(function(x){if(x.country&&!/^malaysia$/i.test(x.country))evc[x.event]=x.country;});
   res.forEach(function(x){if(!x.country&&evc[x.event]){x.country=evc[x.event];x.ovs=true;x.countrySource="event";}});
   return{riders:riders,results:res,stats:stats,skipped:skipped,newNames:Object.keys(newNames),before:D.results.length};
+}
+
+/* ---- eligibility (year of birth / month categories) ---- */
+function eligNote(r,d,date){
+  if(!r||d.grp==null)return"";
+  if(!r.born)return"⚠ Set this rider’s year of birth (Edit rider) to check eligibility.";
+  var yr=date?parseInt(date.slice(0,4),10):LEAGUE_YEAR,rm=date?parseInt(date.slice(5,7),10):null;
+  if(r.born===d.grp){
+    if(d.half&&r.bm){var hb=r.bm<=6?1:2;if(hb!==d.half)return"⚠ Born "+MN[r.bm-1]+" "+r.born+" – this is the "+(d.half===1?"Jan–Jun":"Jul–Dec")+" category.";}
+    return"✓ Born "+r.born+" – eligible.";
+  }
+  if(d.mode==="month"&&r.born===d.grp-1){
+    if(!r.bm||!rm)return"⚠ Born "+r.born+": may race the "+d.grp+" category only until their birthday in "+yr+". Set birth month and race date to confirm.";
+    if(rm<r.bm)return"✓ Born "+MN[r.bm-1]+" "+r.born+" – still eligible before their "+MN[r.bm-1]+" birthday.";
+    if(rm===r.bm)return"⚠ Born "+MN[r.bm-1]+" "+r.born+" – eligible only up to their birthday this month.";
+    return"⛔ Born "+MN[r.bm-1]+" "+r.born+" – birthday already passed, no longer eligible for the "+d.grp+" category.";
+  }
+  return"⛔ Born "+r.born+" – not eligible for the "+d.grp+" category"+(d.mode==="month"?"":" (by-year race)")+".";
 }
 
 /* ---- UI helpers ---- */
@@ -588,7 +659,7 @@ function viewAdmin(){
 var render1=render;render=function(){if(tab==="admin"&&!ADMIN)tab="board";render1();};
 
 var editPic,PENDING=null;
-function photoBox(r){return r.pic?'<img src="'+r.pic+'" alt="">':sil();}
+function photoBox(r){return picOf(r)?'<img src="'+picOf(r)+'" alt="">':sil();}
 function riderForm(id){
   var r=id?byId[id]:{id:nextRiderId(),nick:"",name:"",bib:"",g:"Male"};editPic=undefined;
   modal('<h2 class="mh">'+(id?"Edit rider":"Add rider")+'</h2>'
@@ -596,6 +667,8 @@ function riderForm(id){
    +'<p class="note" style="margin:6px 0 0">Tip: a PNG with a transparent background looks best on the podium.</p>'
    +fld("Rider ID","f_id",r.id,'readonly')+fld("Nickname (shown in the app)","f_nick",r.nick)+fld("Full name","f_name",r.name)
    +fld("Bib number","f_bib",r.bib==null?"":r.bib,'inputmode="numeric"')
+   +fld("Year of birth (e.g. 2019)"+(r.bi?" – estimated, please confirm":""),"f_born",r.born==null?"":r.born,'inputmode="numeric" maxlength="4"')
+   +'<label class="fl"><span>Birth month (for month-based races)</span><select id="f_bm"><option value="">Not set</option>'+MN.map(function(m,i){return'<option value="'+(i+1)+'"'+(r.bm===i+1?" selected":"")+'>'+m+'</option>';}).join("")+'</select></label>'
    +'<label class="fl"><span>Gender</span><select id="f_g"><option'+(r.g==="Male"?" selected":"")+'>Male</option><option'+(r.g==="Female"?" selected":"")+'>Female</option><option value=""'+(!r.g?" selected":"")+'>Not set</option></select></label>'
    +'<div class="brow"><button type="button" class="btn s" data-act="close">Cancel</button><button type="button" class="btn" data-primary data-act="save-rider" data-id="'+(id?esc(id):"")+'">Save</button></div>'
    +(id?'<button type="button" class="btn d" style="margin-top:10px" data-act="del-rider" data-id="'+esc(id)+'">Delete rider</button>':""));
@@ -608,7 +681,8 @@ function resForm(row,rid){
    +'<label class="fl"><span>Rider</span><select id="r_rid">'+opts+'</select></label>'
    +'<label class="fl"><span>Event name</span><input id="r_event" list="evl" value="'+esc(x.event)+'"></label><datalist id="evl">'+Object.keys(evs).sort().map(function(e){return'<option value="'+esc(e)+'">';}).join("")+'</datalist>'
    +'<label class="fl"><span>Date</span><input id="r_date" type="date" value="'+esc(x.date||"")+'"></label>'
-   +fld("Category (e.g. 4 Tahun, OPEN GIRL)","r_cat",x.cat)
+   +fld("Category (e.g. 2019, 2019 Jan-Jun, 7 Tahun, 5 - 9 Tahun, OPEN GIRL)","r_cat",x.cat)
+   +'<label class="fl"><span>Race type</span><select id="r_mode"><option value="year"'+(x.mode!=="month"?" selected":"")+'>By year of birth</option><option value="month"'+(x.mode==="month"?" selected":"")+'>By month (older rider may join until birthday)</option></select></label>'
    +fld("Position (e.g. P3, 2, P2 NOVICE, SEMI FINAL, DNF)","r_raw",x.raw)
    +fld("Country (leave blank for Malaysia)","r_country",x.country)
    +'<p class="note" id="rp" style="margin:10px 0 0"></p>'
@@ -619,8 +693,12 @@ function resForm(row,rid){
 }
 function resPreview(){
   var el=$("rp");if(!el||!$("r_raw"))return;
-  var d=derive($("r_cat").value,$("r_raw").value,$("r_country").value),p=score({place:d.place,lvl:d.lvl,ovs:d.ovs});
+  var d=derive($("r_cat").value,$("r_raw").value,$("r_country").value,$("r_date").value,$("r_mode").value),p=score({place:d.place,lvl:d.lvl,ovs:d.ovs,rid:$("r_rid").value,grp:d.grp});
   el.innerHTML=d.place?'Counts as <b>'+ord(d.place)+'</b>'+(d.lvl==="novice"?" (novice scoring)":"")+(d.ovs?" + overseas bonus":"")+' = <b>'+p+' pts</b>':'No final placing ('+esc(d.status)+') = <b>'+p+' pts</b>'+(d.ovs?" (overseas bonus only)":"");
+  if(offYear({rid:$("r_rid").value,grp:d.grp}))el.innerHTML+='<br>−'+PENALTY+' pt: rider is racing outside their own year of birth.';
+  if(d.rng){var rr0=byId[$("r_rid").value];el.innerHTML+='<br>Age-range category: counts as open, under '+(rr0&&rr0.born?'year of birth '+rr0.born:'the rider’s year of birth (set it in Edit rider)')+'. No deduction.';}
+  var en=eligNote(byId[$("r_rid").value],d,$("r_date").value);if(en)el.innerHTML+='<br>'+esc(en);
+  if(d.grp!=null)el.innerHTML+='<br>Group: <b>'+esc(gLabel(gkey(d)))+'</b>';
 }
 function download(name,text,mime){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:mime}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500);}
 function exportHtml(){
@@ -649,20 +727,25 @@ document.addEventListener("click",function(e){
   if(act==="login-open"){modal('<h2 class="mh">Admin login</h2><p class="note" style="margin:0 0 4px">Sign in to edit results, riders and photos, and to sync from Excel.</p>'+fld("Admin ID","l_id","",'autocomplete="username" autocapitalize="none" autocorrect="off"')+'<label class="fl"><span>Password</span><input id="l_pw" type="password" autocomplete="current-password"></label><p class="note" id="l_err" style="color:var(--hot);margin:8px 0 0;min-height:18px"></p><div class="brow"><button type="button" class="btn s" data-act="close">Cancel</button><button type="button" class="btn" data-primary data-act="login-go">Log in</button></div>');setTimeout(function(){var i=$("l_id");if(i)i.focus();},50);return;}
   if(act==="login-go"){
     var id=($("l_id").value||"").trim().toLowerCase(),pw=$("l_pw").value||"";
-    if(id===AUTH_ID&&sha256("cpb|"+id+"|"+pw)===AUTH_HASH){ADMIN=true;try{sessionStorage.setItem("cpb_admin","1");}catch(_){}closeModal();tab="admin";openRider=null;render();toast("Logged in as admin");}
+    if(id===AUTH_ID&&sha256("cpb|"+id+"|"+pw)===AUTH_HASH){ADMIN=true;ADMIN_PW=pw;try{sessionStorage.setItem("cpb_admin","1");}catch(_){}closeModal();tab="admin";openRider=null;render();toast("Logged in as admin");}
     else{$("l_err").textContent="Wrong ID or password.";$("l_pw").value="";}
     return;
   }
   if(!ADMIN&&act!=="logout")return;
-  if(act==="logout"){ADMIN=false;try{sessionStorage.removeItem("cpb_admin");}catch(_){}if(tab==="admin")tab="board";render();toast("Logged out");return;}
+  if(act==="logout"){ADMIN=false;ADMIN_PW=null;try{sessionStorage.removeItem("cpb_admin");}catch(_){}if(tab==="admin")tab="board";render();toast("Logged out");return;}
   if(act==="add-rider"){riderForm(null);return;}
   if(act==="edit-rider"){riderForm(a.dataset.id);return;}
   if(act==="photo-clear"){editPic="";var pp=$("pp");if(pp)pp.innerHTML=sil();return;}
   if(act==="save-rider"){
     var nick=$("f_nick").value.trim().replace(/\s+/g," ");if(!nick){toast("Enter a nickname");return;}
     var bib=parseInt($("f_bib").value,10),ex=a.dataset.id,r=ex?byId[ex]:{id:$("f_id").value};
+    var bn=parseInt($("f_born").value,10),bmm=parseInt($("f_bm").value,10);
+    if(!isNaN(bn)&&(bn<2000||bn>2035)){toast("Enter a valid year of birth");return;}
+    if(isNaN(bn)){delete r.born;}else{if(r.born!==bn)delete r.bi;r.born=bn;if(!ex||byId[ex].born===bn)delete r.bi;}
+    if(isNaN(bmm))delete r.bm;else r.bm=bmm;
     r.nick=nick;r.name=$("f_name").value.trim()||nick;r.bib=isNaN(bib)?null:bib;r.g=$("f_g").value;
     if(editPic==="")delete r.pic;else if(editPic)r.pic=editPic;
+    if(pReady()&&ADMIN_PW){if(editPic==="")dpPost({action:"delpic",rid:r.id,auth:dpAuth()}).then(function(){delete DPICS[r.id];dpCache();render();}).catch(function(){});else if(editPic)dpUpload(r.id,editPic,"").then(function(){render();}).catch(function(e){toast(dpErr(e));});}
     if(!ex){if(byId[r.id]){toast("That rider ID already exists");return;}D.riders.push(r);}
     save();closeModal();rerender();toast("Rider saved");return;
   }
@@ -676,7 +759,7 @@ document.addEventListener("click",function(e){
   if(act==="edit-res"){resForm(parseInt(a.dataset.row,10));return;}
   if(act==="save-res"){
     var ev=$("r_event").value.trim().replace(/\s+/g," ");if(!ev){toast("Enter the event name");return;}
-    var d=derive($("r_cat").value,$("r_raw").value,$("r_country").value),dt=$("r_date").value||null,rw=a.dataset.row;
+    var dt=$("r_date").value||null,d=derive($("r_cat").value,$("r_raw").value,$("r_country").value,dt,$("r_mode").value),rw=a.dataset.row;
     var x;
     if(rw===""){var mx=0;D.results.forEach(function(y){if(y.row>mx)mx=y.row;});x={row:mx+1};D.results.push(x);}
     else x=D.results.filter(function(y){return y.row===parseInt(rw,10);})[0];
@@ -700,7 +783,7 @@ document.addEventListener("click",function(e){
   if(act==="reset-all"){
     if(!confirm("Discard all edits made in this browser and go back to the data saved in this file?"))return;
     try{localStorage.removeItem(LSK);}catch(_){}
-    D=JSON.parse(document.getElementById("seed").textContent);openRider=null;rerender();toast("Data reset");return;
+    D=migrate(JSON.parse(document.getElementById("seed").textContent));openRider=null;rerender();toast("Data reset");return;
   }
 });
 document.addEventListener("change",function(e){
@@ -711,7 +794,7 @@ document.addEventListener("change",function(e){
     f.arrayBuffer().then(parseWorkbook).then(function(p){PENDING=buildImport(p);showImport(PENDING);}).catch(function(err){modal('<h2 class="mh">Could not read the file</h2><p class="note">'+esc(err&&err.message||err)+'</p><div class="brow"><button type="button" class="btn" data-act="close">OK</button></div>');});
     t.value="";
   }else if(t.id==="jf"){
-    f.text().then(function(s){var o=JSON.parse(s);if(!o||!Array.isArray(o.riders)||!Array.isArray(o.results))throw new Error("bad");D=o;save();rerender();toast("Backup restored");}).catch(function(){toast("That is not a valid backup file");});
+    f.text().then(function(s){var o=JSON.parse(s);if(!o||!Array.isArray(o.riders)||!Array.isArray(o.results))throw new Error("bad");D=migrate(o);save();rerender();toast("Backup restored");}).catch(function(){toast("That is not a valid backup file");});
     t.value="";
   }
 });
@@ -906,7 +989,7 @@ function viewEvents(){
   if(ADMIN&&!mkReady())h+='<p class="note" style="margin:6px 2px 0">Marketplace server not connected yet, so events are saved on this device only.</p>';
   else if(EVERR)h+='<p class="note" style="margin:6px 2px 0;color:var(--hot)">Could not reach the server. Showing the last loaded events.</p>';
   if(!L.length)return h+'<div class="card empty" style="margin-top:8px">No race events yet.</div>';
-  if(up.length)h+='<div class="evsub">Upcoming</div><div class="card" style="overflow:hidden">'+up.map(function(x){return evCard(x,false);}).join("")+'</div>';
+  if(up.length)h+='<div class="evsub">Upcoming <span style="text-transform:none;font-weight:600">· swipe left or right</span></div><div class="evcarw"><button type="button" class="evnav p" data-evnav="-1" aria-label="Previous event">‹</button><div class="evcar" id="evcar">'+up.map(evCardC).join("")+'</div><button type="button" class="evnav n" data-evnav="1" aria-label="Next event">›</button></div><div class="evcnt" id="evcnt"></div>';
   if(past.length)h+='<div class="evsub">Past events</div><div class="card" style="overflow:hidden">'+past.map(function(x){return evCard(x,true);}).join("")+'</div>';
   return h;
 }
@@ -950,8 +1033,8 @@ function evSave(btn){
 document.addEventListener("click",function(e){
   var a=e.target.closest("[data-act]");if(!a)return;var act=a.dataset.act;
   if(act==="pic-zoom"){
-    var r=byId[a.dataset.id];if(!r||!r.pic)return;
-    modal('<img class="zoomimg" src="'+r.pic+'" alt="'+esc(r.nick)+'"><div style="text-align:center;font-weight:700;margin:10px 0 2px">'+esc(r.nick)+'</div><button type="button" class="btn s" style="margin-top:8px" data-act="close">Close</button>');
+    var r=byId[a.dataset.id];if(!r||!picOf(r))return;
+    modal('<img class="zoomimg" src="'+picOf(r)+'" alt="'+esc(r.nick)+'"><div style="text-align:center;font-weight:700;margin:10px 0 2px">'+esc(r.nick)+'</div>'+('<button type="button" class="btn" style="margin-top:8px" data-act="dp-open" data-id="'+esc(r.id)+'">📷 Change photo</button>')+'<button type="button" class="btn s" style="margin-top:8px" data-act="close">Close</button>');
     return;
   }
   if(act.indexOf("ev-")!==0)return;
@@ -968,6 +1051,109 @@ document.addEventListener("click",function(e){
 evFetch(true);
 setInterval(function(){if(tab==="races"&&!document.hidden&&!document.querySelector("#modal.on"))evFetch(true);},30000);
 
+
+/* ---- upcoming events: barrel carousel ---- */
+function evDays(d){var p=(d||"").split("-");if(p.length!==3)return"";var a=new Date(+p[0],+p[1]-1,+p[2]),t=new Date();t.setHours(0,0,0,0);var n=Math.round((a-t)/864e5);return n<=0?"Today":n===1?"Tomorrow":"In "+n+" days";}
+function evCardC(x){
+  var p=(x.date||"").split("-"),mon=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var big=p.length===3?'<div class="evbig">'+parseInt(p[2],10)+'<small>'+mon[parseInt(p[1],10)-1]+' '+p[0]+'</small></div>':'';
+  return'<div class="evk">'+'<div class="evkd">'+big+'<div class="evwhen">🏁 '+esc(evDays(x.date))+'</div></div>'
+   +'<div class="evn">'+esc(x.name)+'</div><div class="evl">📍 '+esc(x.location)+'</div>'
+   +(ADMIN?'<div class="evadm"><button type="button" class="ebtn" data-act="ev-edit" data-id="'+esc(x.id)+'">Edit</button><button type="button" class="ebtn" style="color:var(--hot)" data-act="ev-del" data-id="'+esc(x.id)+'">Delete</button></div>':'')+'</div>';
+}
+function evBarrel(){
+  var c=document.getElementById("evcar");if(!c)return;
+  var mid=c.scrollLeft+c.clientWidth/2,best=0,bd=1e9,kids=Array.prototype.slice.call(c.children);
+  kids.forEach(function(k,i){
+    var cx=k.offsetLeft+k.offsetWidth/2,dist=Math.abs(cx-mid),d=Math.min(1,dist/(c.clientWidth*0.6));
+    k.style.transform="scale("+(1-0.14*d).toFixed(3)+")";k.style.opacity=(1-0.5*d).toFixed(2);
+    if(dist<bd){bd=dist;best=i;}
+  });
+  var n=document.getElementById("evcnt");if(n)n.textContent=(best+1)+" / "+kids.length;
+}
+document.addEventListener("scroll",function(e){if(e.target&&e.target.id==="evcar")evBarrel();},true);
+window.addEventListener("resize",evBarrel);
+document.addEventListener("click",function(e){
+  var b=e.target.closest("[data-evnav]");if(!b)return;
+  var c=document.getElementById("evcar");if(!c)return;
+  var k=c.children[0],step=k?k.offsetWidth+12:260;
+  c.scrollBy({left:step*parseInt(b.dataset.evnav,10),behavior:"smooth"});
+});
+var renderEv0=render;render=function(){renderEv0();evBarrel();};
+
+/* ---- parent photo updates: photos live in Google Drive through an Apps Script web app ---- */
+var PHOTO_API="https://script.google.com/macros/s/AKfycbzGavHjUUDD6OgdaoPDa5G5lvb8oyKQmSFDWd4onUVQHmv9ChS4shsdlkM3Y19KC-vR/exec";   // paste your Apps Script web app URL here (see setup steps)
+var LSP="cpb_drive_pics_v1",DPICS={},ADMIN_PW=null,dpPic=null,dpBusy=false;
+try{DPICS=JSON.parse(localStorage.getItem(LSP)||"{}")||{};}catch(_){DPICS={};}
+function pReady(){return/^https:\/\//.test(PHOTO_API);}
+function dpCache(){try{localStorage.setItem(LSP,JSON.stringify(DPICS));}catch(_){}}
+function dpErr(e){var m=e&&e.message?e.message:"";return(!m||/fetch|network|load failed/i.test(m))?"Could not reach the photo server. Check your connection":m;}
+function picOf(r){if(!r)return"";var d=DPICS[r.id];return d&&d.id?"https://lh3.googleusercontent.com/d/"+encodeURIComponent(d.id):(r.pic||"");}
+function dpPost(body){return fetch(PHOTO_API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(j){if(!j||!j.ok)throw new Error((j&&j.error)||"Request failed");return j;});}
+function dpAuth(){return(ADMIN&&ADMIN_PW)?{id:AUTH_ID,pw:ADMIN_PW}:undefined;}
+function dpUpload(id,img,pin){return dpPost({action:"upload",rid:id,pin:pin||"",auth:dpAuth(),img:img}).then(function(j){DPICS[id]={id:j.id,ts:j.ts};dpCache();return j;});}
+function dpFetch(){
+  if(!pReady()||dpBusy)return;dpBusy=true;
+  fetch(PHOTO_API+(PHOTO_API.indexOf("?")<0?"?":"&")+"t="+Date.now()).then(function(r){return r.json();}).then(function(j){
+    if(!j||!j.ok||!j.pics)return;
+    var changed=JSON.stringify(j.pics)!==JSON.stringify(DPICS);DPICS=j.pics;dpCache();
+    if(changed&&!document.querySelector("#modal.on"))render();
+  }).catch(function(){}).then(function(){dpBusy=false;});
+}
+var viewProfileDP=viewProfile;
+viewProfile=function(id){
+  var h=viewProfileDP(id),r=byId[id];
+  if(!r)return h;
+  h=h.replace('class="pav zoom" data-act="pic-zoom"','class="pav zoom canup" data-act="pic-zoom"');
+  h=h.replace('<div class="pav lockd">','<div class="pav lockd zoom canup" data-act="dp-open" data-id="'+esc(id)+'" role="button" aria-label="Add photo">');
+  if(!ADMIN||!pReady())return h;
+  var card='<div class="card" style="display:flex;gap:10px;align-items:center;justify-content:space-between"><div><b>Parent photo PIN</b><div class="note" style="margin:2px 0 0">Lets this rider’s parent change the photo</div></div><button type="button" class="btn s" style="width:auto;padding:10px 14px" data-act="dp-pin" data-id="'+esc(id)+'">Create PIN</button></div>';
+  return h.replace('<div class="kv k5">',card+'<div class="kv k5">');
+};
+function dpOpen(id){
+  var r=byId[id];if(!r)return;dpPic=null;
+  if(!pReady()&&!ADMIN){
+    modal('<h2 class="mh">Update photo – '+esc(r.nick)+'</h2><p class="note" style="margin:0 2px 12px">Photo upload is not switched on yet. Please ask the club admin.</p><button type="button" class="btn s" data-act="close">Close</button>');
+    return;
+  }
+  var needPin=pReady()&&!(ADMIN&&ADMIN_PW);
+  modal('<h2 class="mh">Update photo – '+esc(r.nick)+'</h2>'
+    +(needPin?'<label class="fl"><span>Parent PIN</span><input id="dp_pin" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="PIN given by the club admin"></label>':'')
+    +(pReady()&&ADMIN&&!ADMIN_PW?'<p class="note" style="margin:0 2px 8px">Admin: log out and log in again to upload without a PIN.</p>':'')
+    +(!pReady()?'<p class="note" style="margin:0 2px 8px">Google Drive is not connected yet, so this photo is saved on this device only.</p>':'')
+    +'<div id="dp_prev" class="pp-prev"></div>'
+    +'<label class="btn s" style="display:block;text-align:center">Choose photo<input type="file" id="dp_file" accept="image/*" hidden></label>'
+    +'<p class="note" style="margin:8px 2px">Use a clear photo of the rider. A cut-out with a transparent background looks best.</p>'
+    +'<div class="brow"><button type="button" class="btn s" data-act="close">Cancel</button><button type="button" class="btn" id="dp_go" data-act="dp-save" data-id="'+esc(id)+'" disabled>Save photo</button></div>');
+}
+document.addEventListener("change",function(e){
+  var t=e.target;if(t.id!=="dp_file"||!t.files||!t.files[0])return;
+  blobToPic(t.files[0]).then(function(u){dpPic=u;var p=$("dp_prev");if(p)p.innerHTML='<img src="'+u+'" alt="">';var g=$("dp_go");if(g)g.disabled=false;}).catch(function(){toast("Could not read that image");});
+});
+document.addEventListener("click",function(e){
+  var a=e.target.closest("[data-act]");if(!a)return;var act=a.dataset.act;if(act.indexOf("dp-")!==0)return;
+  var id=a.dataset.id;
+  if(act==="dp-open")dpOpen(id);
+  else if(act==="dp-save"){
+    if(!dpPic){toast("Choose a photo first");return;}
+    var pin=$("dp_pin")?$("dp_pin").value.trim():"";
+    if($("dp_pin")&&!pin){toast("Enter the parent PIN");return;}
+    if(!pReady()){if(!ADMIN)return;byId[id].pic=dpPic;if(save()){closeModal();render();toast("Photo saved on this device");}return;}
+    a.disabled=true;a.textContent="Saving…";
+    dpUpload(id,dpPic,pin).then(function(){closeModal();render();toast("Photo updated");}).catch(function(err){a.disabled=false;a.textContent="Save photo";toast(dpErr(err));});
+  }
+  else if(act==="dp-pin"){
+    if(!ADMIN)return;
+    if(!ADMIN_PW){toast("Log out and log in again as admin to manage PINs");return;}
+    var r=byId[id];if(!r||!confirm("Create a new parent PIN for "+r.nick+"? Any old PIN stops working."))return;
+    dpPost({action:"setpin",rid:id,auth:dpAuth()}).then(function(j){
+      modal('<h2 class="mh">Parent PIN – '+esc(r.nick)+'</h2><div class="pinbox">'+esc(j.pin)+'</div><p class="note" style="margin:0 2px 10px">Give this PIN to the parent. It cannot be shown again; create a new one if it is lost.</p><button type="button" class="btn s" data-act="close">Close</button>');
+    }).catch(function(err){toast(dpErr(err));});
+  }
+});
+dpFetch();
+setInterval(function(){if(!document.hidden)dpFetch();},60000);
+
 /* ---- rider photo: pick an existing rider ---- */
 var lastQp=null;
 var riderForm0=riderForm;
@@ -975,11 +1161,11 @@ riderForm=function(id){
   riderForm0(id);
   var h2=document.querySelector("#modal .mh");if(!h2)return;
   h2.insertAdjacentHTML("afterend",'<label class="fl"><span>Choose an existing rider to edit or update their photo</span><select id="f_pick"><option value="">+ New rider</option>'
-    +RIDERS.slice().sort(function(a,b){return a.nick.localeCompare(b.nick);}).map(function(r){return'<option value="'+esc(r.id)+'"'+(r.id===id?" selected":"")+'>'+esc(r.nick)+(r.pic?"":" (no photo)")+'</option>';}).join("")+'</select></label>');
+    +RIDERS.slice().sort(function(a,b){return a.nick.localeCompare(b.nick);}).map(function(r){return'<option value="'+esc(r.id)+'"'+(r.id===id?" selected":"")+'>'+esc(r.nick)+(picOf(r)?"":" (no photo)")+'</option>';}).join("")+'</select></label>');
 };
 var viewAdmin0=viewAdmin;
 viewAdmin=function(){
-  var h=viewAdmin0(),opts=RIDERS.slice().sort(function(a,b){return a.nick.localeCompare(b.nick);}).map(function(r){return'<option value="'+esc(r.id)+'"'+(r.id===lastQp?" selected":"")+'>'+esc(r.nick)+(r.pic?"":" (no photo)")+'</option>';}).join("");
+  var h=viewAdmin0(),opts=RIDERS.slice().sort(function(a,b){return a.nick.localeCompare(b.nick);}).map(function(r){return'<option value="'+esc(r.id)+'"'+(r.id===lastQp?" selected":"")+'>'+esc(r.nick)+(picOf(r)?"":" (no photo)")+'</option>';}).join("");
   var card='<div class="card"><b>Update a rider photo</b><p class="note">Pick an existing rider, then choose a photo. It is saved straight away.</p><label class="fl"><span>Rider</span><select id="qp_rider">'+opts+'</select></label><label class="btn" style="display:block;text-align:center">Choose photo<input type="file" id="qpf" accept="image/*" hidden></label></div>';
   return h.replace('<div class="card"><b>Add or edit</b>',card+'<div class="card"><b>Add or edit</b>');
 };
@@ -991,11 +1177,17 @@ document.addEventListener("change",function(e){
     Promise.all(fs.map(mkPhoto)).then(function(us){us.forEach(function(u){if(mkPics.length<3)mkPics.push(u);});mkStrip();}).catch(function(){toast("Could not read that image");});
   }else if(t.id==="qpf"&&ADMIN&&f){
     var id=$("qp_rider").value;lastQp=id;
-    blobToPic(f).then(function(u){byId[id].pic=u;if(save()){render();toast(byId[id].nick+" photo updated");}}).catch(function(){toast("Could not read that image");});
+    blobToPic(f).then(function(u){
+      if(pReady()){if(!ADMIN_PW){toast("Log out and log in again to save photos to Google Drive");return;}
+        return dpUpload(id,u,"").then(function(){render();toast(byId[id].nick+" photo updated");});}
+      byId[id].pic=u;if(save()){render();toast(byId[id].nick+" photo updated");}
+    }).catch(function(e){toast(e&&e.message?dpErr(e):"Could not read that image");});
     t.value="";
   }else if(t.id==="f_pick"&&ADMIN){riderForm(t.value||null);}
 });
 
+document.addEventListener("input",function(e){if(e.target&&/^r_date$/.test(e.target.id))resPreview();});
+document.addEventListener("change",function(e){if(e.target&&/^r_(rid|mode|date)$/.test(e.target.id))resPreview();});
 window.__cpb={derive:derive,parseWorkbook:parseWorkbook,buildImport:buildImport,sha256:sha256,get D(){return D;}};
 
 renderHeaderStats();render();
