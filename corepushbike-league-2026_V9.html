@@ -723,6 +723,7 @@ document.addEventListener("keydown",function(e){
    Paste your web app URL below, e.g. "https://script.google.com/macros/s/XXXX/exec" */
 var MK_DB="https://script.google.com/macros/s/AKfycbzpASg3w93J9zZh2YWd_6rHsoozg0EUCsiClXiNpJdw_QlIgLZjFWOx_gCdPnb2VcI/exec";
 var LSM="cpb_market_mine_v1",LSC="cpb_market_cache_v1",LSO="cpb_market_own_v1";
+var mkDraft=null,mkSaving=false;
 var MINE=[],SHARED=[],OWN=[],mkLast=0,mkErr=false,mkBusy=false;
 try{MINE=JSON.parse(localStorage.getItem(LSM)||"[]");if(!Array.isArray(MINE))MINE=[];}catch(_){MINE=[];}
 try{SHARED=JSON.parse(localStorage.getItem(LSC)||"[]");if(!Array.isArray(SHARED))SHARED=[];}catch(_){SHARED=[];}
@@ -810,7 +811,7 @@ function mkForm(id){
   if(!mkReady()){toast("Marketplace is not available right now");return;}
   var x=id?mkFind(id):null;if(id&&!x)return;
   x=x||{title:"",brand:"",desc:"",price:"",location:"",seller:"",phone:"",photos:[]};
-  mkEditId=id||null;mkPics=(x.photos||[]).slice();
+  mkEditId=id||null;mkDraft=null;mkSaving=false;mkPics=(x.photos||[]).slice();
   var ph=x.phone&&x.phone.charAt(0)==="6"?"0"+x.phone.slice(2):(x.phone||"");
   modal('<h2 class="mh">'+(id?"Edit item":"Sell an item")+'</h2>'
    +'<div class="fl"><span>Photos (up to 3)</span><div id="mk_ph" class="mkph"></div></div>'
@@ -834,13 +835,16 @@ function mkSaveForm(btn){
   var editing=mkEditId,old=editing?mkFind(editing):null;
   if(editing&&!old)return;
   if(editing){rec.id=old.id;rec.ts=old.ts||Date.now();}
-  else{rec.id="m"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);rec.ts=Date.now();}
+  else{if(!mkDraft)mkDraft={id:"m"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),ts:Date.now()};rec.id=mkDraft.id;rec.ts=mkDraft.ts;}
+  if(mkSaving)return;mkSaving=true;
   if(btn){btn.disabled=true;btn.textContent="Publishing…";}
-  mkReq("PUT",rec.id,rec).then(function(){
+  mkUpPhotos(rec.photos).then(function(urls){mkPics=urls.slice();rec.photos=urls;return mkReq("PUT",rec.id,rec);}).then(function(){
+    mkSaving=false;mkDraft=null;
     var i,found=false;for(i=0;i<SHARED.length;i++)if(SHARED[i].id===rec.id){SHARED[i]=rec;found=true;}
     if(!found){SHARED.push(rec);OWN.push(rec.id);mkOwnSave();}
     mkCache();closeModal();render();toast(editing?"Item updated":"Item posted");
   }).catch(function(){
+    mkSaving=false;
     if(btn){btn.disabled=false;btn.textContent=editing?"Save":"Post item";}
     toast("Could not publish. Check your connection and try again");
   });
