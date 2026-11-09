@@ -184,6 +184,11 @@ details.lg[open]>summary{border-radius:14px 14px 0 0}
 .evk .evl{color:var(--muted);font-size:13px}
 .evk .evadm{display:flex;gap:6px;margin-top:12px}
 .evk .evadm .ebtn{margin-left:0}
+.evpost{display:block;width:100%;max-height:230px;object-fit:cover;object-position:top;border-radius:12px;margin:12px 0 0;cursor:zoom-in;background:var(--chip)}
+.evact{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.evlink{display:inline-block;background:var(--hero);color:var(--lime);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:800;text-decoration:none}
+.evth{flex:none;width:44px;height:58px;object-fit:cover;border-radius:8px;cursor:zoom-in;background:var(--chip)}
+.pvbox img{display:block;max-width:100%;max-height:220px;border-radius:10px;margin:8px 0}
 .evnav{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:38px;height:38px;border-radius:50%;border:0;background:var(--lime);color:var(--lime-ink);font-size:22px;font-weight:800;line-height:1;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer}
 .evnav.p{left:6px}.evnav.n{right:6px}
 .evcnt{text-align:center;font-size:12px;font-weight:700;color:var(--muted);margin:-4px 0 6px}
@@ -787,6 +792,7 @@ document.addEventListener("click",function(e){
 });
 document.addEventListener("change",function(e){
   var t=e.target,f=t.files&&t.files[0];if(!f||!ADMIN)return;
+  if(t.id==="ev_pf"){evPosterFit(f).then(function(u){evPoster=u;var pv=$("ev_pv");if(pv)pv.innerHTML='<img src="'+u+'" alt="Poster">';}).catch(function(){toast("Could not read that image");});t.value="";return;}
   if(t.id==="pf"){blobToPic(f).then(function(u){editPic=u;var pp=$("pp");if(pp)pp.innerHTML='<img src="'+u+'" alt="">';}).catch(function(){toast("Could not read that image");});}
   else if(t.id==="xf"){
     toast("Reading Excel…");
@@ -972,11 +978,15 @@ function evFetch(force){
     if(changed&&tab==="races"&&!document.querySelector("#modal.on"))render();
   }).catch(function(){var was=EVERR;EVERR=true;if(!was&&tab==="races"&&!document.querySelector("#modal.on"))render();}).then(function(){EVBUSY=false;});
 }
+function evUrlOk(u){u=(u||"").trim();if(!u)return"";if(!/^https?:\/\//i.test(u))u="https://"+u;try{var p=new URL(u);return(p.protocol==="http:"||p.protocol==="https:")?p.href:"";}catch(_){return"";}}
+function evPosterOf(x){return x&&x.photos&&x.photos[0]||"";}
+function evLinkBtn(x){var u=evUrlOk(x.link);return u?'<a class="evlink" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">🔗 Race link</a>':'';}
 function evToday(){var d=new Date();return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2);}
 function evCard(x,past){
   var p=(x.date||"").split("-"),mon=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   var dd=p.length===3?'<div class="evdw"><span class="evflag" aria-hidden="true">🏁</span><div class="evdate">'+parseInt(p[2],10)+'<small>'+mon[parseInt(p[1],10)-1]+' '+p[0]+'</small></div></div>':'';
-  return'<div class="evcard'+(past?' past':'')+'">'+dd+'<div style="flex:1;min-width:0"><div class="evn">'+esc(x.name)+'</div><div class="evl">📍 '+esc(x.location)+' · '+esc(fmtDate(x.date))+'</div></div>'
+  return'<div class="evcard'+(past?' past':'')+'">'+dd+'<div style="flex:1;min-width:0"><div class="evn">'+esc(x.name)+'</div><div class="evl">📍 '+esc(x.location)+' · '+esc(fmtDate(x.date))+'</div>'+(evUrlOk(x.link)?'<div style="margin-top:6px">'+evLinkBtn(x)+'</div>':'')+'</div>'
+   +(evPosterOf(x)?'<img class="evth" src="'+esc(evPosterOf(x))+'" alt="Poster" data-act="ev-poster" data-id="'+esc(x.id)+'">':'')
    +(ADMIN?'<span style="display:flex;flex:none"><button type="button" class="ebtn" data-act="ev-edit" data-id="'+esc(x.id)+'">Edit</button><button type="button" class="ebtn" style="color:var(--hot)" data-act="ev-del" data-id="'+esc(x.id)+'">Delete</button></span>':'')+'</div>';
 }
 function viewEvents(){
@@ -998,14 +1008,20 @@ viewRaces=function(){
   var pointsHtml=parts[0],rulesHtml=(parts[1]||"").split('<h3>Overseas races counted</h3>')[0];
   return pointsHtml+(rulesHtml?'<details class="lg"><summary>How the league works</summary>'+rulesHtml+'</details>':'')+viewEvents()+'<div style="height:6px"></div>'+viewRaces0();
 };
+var evPoster;
+function evPosterFit(blob){return createImageBitmap(blob).then(function(bm){var s=Math.min(1,1000/bm.width,1400/bm.height),w=Math.max(1,Math.round(bm.width*s)),h=Math.max(1,Math.round(bm.height*s));var c=document.createElement("canvas");c.width=w;c.height=h;var g=c.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,w,h);g.drawImage(bm,0,0,w,h);if(bm.close)bm.close();return c.toDataURL("image/jpeg",0.82);});}
 function evForm(id){
   if(!ADMIN)return;
   var x=id?evFind(id):null;if(id&&!x)return;
-  x=x||{name:"",date:"",location:""};
+  x=x||{name:"",date:"",location:"",link:""};evPoster=undefined;
   modal('<h2 class="mh">'+(id?"Edit race event":"Add race event")+'</h2>'
    +fld("Name of the race","ev_name",x.name,'placeholder="e.g. Kejohanan Pushbike Selangor"')
    +fld("Date","ev_date",x.date,'type="date"')
    +fld("Location","ev_loc",x.location,'placeholder="e.g. Shah Alam, Selangor"')
+   +fld("Race link (optional)","ev_link",x.link||"",'type="url" inputmode="url" placeholder="https://… registration or event page"')
+   +'<div class="fl"><span>Poster (optional)</span><div class="pvbox" id="ev_pv">'+(evPosterOf(x)?'<img src="'+esc(evPosterOf(x))+'" alt="Poster">':'')+'</div>'
+   +'<label class="btn s" style="display:block;text-align:center">Choose poster image<input type="file" id="ev_pf" accept="image/*" hidden></label>'
+   +'<button type="button" class="btn s" style="margin-top:8px" data-act="ev-poster-clear">Remove poster</button></div>'
    +'<div class="brow"><button type="button" class="btn s" data-act="close">Cancel</button><button type="button" class="btn" data-primary data-act="ev-save" data-id="'+esc(id||"")+'">'+(id?"Save":"Add event")+'</button></div>');
 }
 function evSave(btn){
@@ -1014,11 +1030,14 @@ function evSave(btn){
   if(!name){toast("Enter the race name");return;}
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){toast("Pick the date");return;}
   if(!loc){toast("Enter the location");return;}
+  var rawLink=$("ev_link").value.trim(),link=evUrlOk(rawLink);
+  if(rawLink&&!link){toast("That race link is not a valid web address");return;}
   var old=id?evFind(id):null;if(id&&!old)return;
-  var rec={id:id||"e"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:name,date:date,location:loc,ts:old?(old.ts||Date.now()):Date.now()};
+  var photos=evPoster===undefined?((old&&old.photos)||[]):(evPoster?[evPoster]:[]);
+  var rec={id:id||"e"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:name,date:date,location:loc,link:link,photos:photos,ts:old?(old.ts||Date.now()):Date.now()};
   function done(){closeModal();render();toast(id?"Event updated":"Event added");}
   if(mkReady()){
-    btn.disabled=true;btn.textContent="Saving…";
+    btn.disabled=true;btn.textContent=evPoster?"Uploading poster…":"Saving…";
     evReq("PUT",rec.id,rec).then(function(){
       var found=false;EVSH=EVSH.map(function(y){if(y.id===rec.id){found=true;return rec;}return y;});if(!found)EVSH.push(rec);
       try{localStorage.setItem(LSE,JSON.stringify(EVSH));}catch(_){}
@@ -1040,6 +1059,8 @@ document.addEventListener("click",function(e){
   if(act==="ev-add")evForm(null);
   else if(act==="ev-edit")evForm(a.dataset.id);
   else if(act==="ev-save")evSave(a);
+  else if(act==="ev-poster"){var px=evFind(a.dataset.id);if(!px||!evPosterOf(px))return;modal('<img class="zoomimg" src="'+esc(evPosterOf(px))+'" alt="Poster"><div style="text-align:center;font-weight:700;margin:10px 0 2px">'+esc(px.name)+'</div>'+(evUrlOk(px.link)?'<div style="text-align:center;margin:8px 0">'+evLinkBtn(px)+'</div>':'')+'<button type="button" class="btn s" style="margin-top:8px" data-act="close">Close</button>');}
+  else if(act==="ev-poster-clear"){evPoster="";var pv=$("ev_pv");if(pv)pv.innerHTML="";}
   else if(act==="ev-del"){
     if(!ADMIN)return;var x=evFind(a.dataset.id);if(!x||!confirm("Delete “"+x.name+"”?"))return;
     if(mkReady()){
@@ -1058,6 +1079,8 @@ function evCardC(x){
   var big=p.length===3?'<div class="evbig">'+parseInt(p[2],10)+'<small>'+mon[parseInt(p[1],10)-1]+' '+p[0]+'</small></div>':'';
   return'<div class="evk">'+'<div class="evkd">'+big+'<div class="evwhen">🏁 '+esc(evDays(x.date))+'</div></div>'
    +'<div class="evn">'+esc(x.name)+'</div><div class="evl">📍 '+esc(x.location)+'</div>'
+   +(evPosterOf(x)?'<img class="evpost" src="'+esc(evPosterOf(x))+'" alt="Poster for '+esc(x.name)+'" loading="lazy" data-act="ev-poster" data-id="'+esc(x.id)+'">':'')
+   +(evUrlOk(x.link)?'<div class="evact">'+evLinkBtn(x)+'</div>':'')
    +(ADMIN?'<div class="evadm"><button type="button" class="ebtn" data-act="ev-edit" data-id="'+esc(x.id)+'">Edit</button><button type="button" class="ebtn" style="color:var(--hot)" data-act="ev-del" data-id="'+esc(x.id)+'">Delete</button></div>':'')+'</div>';
 }
 function evBarrel(){
