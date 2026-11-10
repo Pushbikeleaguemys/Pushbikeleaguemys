@@ -985,15 +985,22 @@ function mkSaveForm(btn){
   else{if(!mkDraft)mkDraft={id:"m"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),ts:Date.now()};rec.id=mkDraft.id;rec.ts=mkDraft.ts;}
   if(mkSaving)return;mkSaving=true;
   if(btn){btn.disabled=true;btn.textContent="Publishing…";}
-  mkUpPhotos(rec.photos).then(function(urls){mkPics=urls.slice();rec.photos=urls;return mkReq("PUT",rec.id,rec);}).then(function(){
+  function mkTry(r){return mkReq("PUT",r.id,r);}
+  mkUpPhotos(rec.photos).then(function(urls){mkPics=urls.slice();rec.photos=urls;
+    return mkTry(rec).catch(function(er){
+      /* some older backends reject the new "cat" field: retry once without it (category is then inferred from the title) */
+      if(/failed to fetch|network|load failed/i.test(String(er&&er.message)))throw er;
+      var r2=Object.assign({},rec);delete r2.cat;return mkTry(r2).then(function(x){rec=r2;return x;},function(){throw er;});
+    });}).then(function(){
     mkSaving=false;mkDraft=null;
     var i,found=false;for(i=0;i<SHARED.length;i++)if(SHARED[i].id===rec.id){SHARED[i]=rec;found=true;}
     if(!found){SHARED.push(rec);OWN.push(rec.id);mkOwnSave();}
     mkCache();closeModal();render();toast(editing?"Item updated":"Item posted");
-  }).catch(function(){
+  }).catch(function(er){
     mkSaving=false;
     if(btn){btn.disabled=false;btn.textContent=editing?"Save":"Post item";}
-    toast("Could not publish. Check your connection and try again");
+    var m=String(er&&er.message||"");
+    toast(/failed to fetch|network|load failed/i.test(m)||!m?"Could not publish. Check your connection and try again":"Could not publish: "+m);
   });
 }
 document.addEventListener("click",function(e){
