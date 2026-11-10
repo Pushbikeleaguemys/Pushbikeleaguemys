@@ -418,7 +418,7 @@ function render(){
   else if(tab==="market")h=viewMarket();
   else if(tab==="admin"&&ADMIN)h=viewAdmin();
   else h=viewRules();
-  if(isGuest()&&(openRider||tab!=="market"))h=lockedView(h);
+  if(isGuest()&&(openRider||!openTab(tab)))h=lockedView(h);
   v.innerHTML=h;
   var mk=(!openRider&&tab==="market"),hT=$("hdrT"),hS=$("hdrS"),hst=$("stats");
   if(hT)hT.innerHTML=mk?'PUSHBIKE <span>MARKETPLACE</span>':'CORE<span>PUSHBIKE</span> LEAGUE';
@@ -428,7 +428,7 @@ function render(){
   T.push(["market","Marketplace",'<path d="M6 7h12l1 13H5L6 7z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/>']);
   if(ADMIN)T.push(["admin","Admin",'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']);
   $("tabs").style.gridTemplateColumns="repeat("+T.length+",1fr)";
-  $("tabs").innerHTML=T.map(function(t){return '<button type="button" data-t="'+t[0]+'" class="'+((!openRider&&tab===t[0])?"on":"")+(isGuest()&&t[0]!=="market"?" tablock":"")+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+t[2]+'</svg>'+'<span>'+t[1]+(isGuest()&&t[0]!=="market"?'<i class="lki">\ud83d\udd12</i>':'')+'</span>'+'</button>';}).join("");
+  $("tabs").innerHTML=T.map(function(t){return '<button type="button" data-t="'+t[0]+'" class="'+((!openRider&&tab===t[0])?"on":"")+(isGuest()&&!openTab(t[0])?" tablock":"")+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+t[2]+'</svg>'+'<span>'+t[1]+(isGuest()&&!openTab(t[0])?'<i class="lki">\ud83d\udd12</i>':'')+'</span>'+'</button>';}).join("");
 }
 document.addEventListener("click",function(e){
   var t=e.target.closest("[data-t]");if(t){tab=t.dataset.t;openRider=null;render();window.scrollTo(0,0);return;}
@@ -447,10 +447,11 @@ async function copyBoard(){
 /* ================= ADMIN: login, editing, Excel sync ================= */
 var AUTH_ID="admin",AUTH_HASH="cc0b7906c1de4708f8888a45850be22b430dcd643a3d082bb7c9ce15161512be";
 var ADMIN=false;try{ADMIN=sessionStorage.getItem("cpb_admin")==="1";}catch(_){}
+function openTab(t){return t==="market"||t==="board"||t==="races";}
 function isGuest(){if(ADMIN)return false;try{return!localStorage.getItem("cpb_member");}catch(_){return true;}}
 function lockedView(inner){var U=window.__cpbUser,st=U&&U.state,c;
   function B(a,t,p){return'<button type="button" class="'+(p?'p':'')+'" data-auth="'+a+'">'+t+'</button>';}
-  if(!U)c='<div class="lk">🔒</div><h2>Members only</h2><p>Sign up free to see pole position, races, riders and rules. The Marketplace stays open to everyone.</p><a class="p" href="#signup">Sign up free</a><a href="#login">I already have an account</a>';
+  if(!U)c='<div class="lk">🔒</div><h2>Members only</h2><p>Sign up free to see rider profiles and the full rider list. Pole position, Races and the Marketplace stay open to everyone.</p><a class="p" href="#signup">Sign up free</a><a href="#login">I already have an account</a>';
   else if(st==="unverified")c='<div class="lk">✉️</div><h2>Verify your email</h2><p>We sent a link to <b>'+(U.email||'')+'</b>. Open it, then tap Refresh.</p>'+B("refresh","I have verified, refresh",1)+B("resend","Resend email")+B("logout","Log out");
   else if(st==="pending")c='<div class="lk">⏳</div><h2>Waiting for approval</h2><p>Thanks'+(U.name?', '+U.name:'')+'! The organiser will approve your registration soon and your Rider ID will be issued.</p>'+B("refresh","Check again",1)+B("logout","Log out");
   else if(st==="rejected")c='<div class="lk">🚫</div><h2>Not approved</h2><p>Your registration was not approved. Please contact the organiser.</p>'+B("logout","Log out");
