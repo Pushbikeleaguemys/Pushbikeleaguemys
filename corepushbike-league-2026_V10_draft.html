@@ -218,7 +218,7 @@ body.mode-welcome #acctChip{display:none}
 .lockcard .lk{font-size:30px}.lockcard h2{margin:6px 0 4px;font-size:19px}.lockcard p{margin:0 0 14px;color:var(--muted);font-size:14px}
 .lockcard a{display:block;padding:12px;border-radius:12px;font-weight:700;text-decoration:none;margin-top:8px;background:var(--chip);color:var(--ink)}
 .lockcard a.p{background:#ffd23f;color:#111}
-#tabs button.locked{opacity:.65}
+#tabs{align-items:start}.tabs button{justify-content:flex-start;line-height:1.2}#tabs button.tablock{opacity:.65}#tabs button .lki{font-style:normal;font-size:10px;line-height:1;margin-left:3px}
 #appRoot[hidden],#welcomeHost[hidden]{display:none}
 body.mode-welcome{background:#0b0d10;padding-bottom:0}
 header .wrap{position:relative}
@@ -428,7 +428,7 @@ function render(){
   T.push(["market","Marketplace",'<path d="M6 7h12l1 13H5L6 7z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/>']);
   if(ADMIN)T.push(["admin","Admin",'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']);
   $("tabs").style.gridTemplateColumns="repeat("+T.length+",1fr)";
-  $("tabs").innerHTML=T.map(function(t){return '<button type="button" data-t="'+t[0]+'" class="'+((!openRider&&tab===t[0])?"on":"")+(isGuest()&&t[0]!=="market"?" locked":"")+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+t[2]+'</svg>'+t[1]+(isGuest()&&t[0]!=="market"?' \ud83d\udd12':'')+'</button>';}).join("");
+  $("tabs").innerHTML=T.map(function(t){return '<button type="button" data-t="'+t[0]+'" class="'+((!openRider&&tab===t[0])?"on":"")+(isGuest()&&t[0]!=="market"?" tablock":"")+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+t[2]+'</svg>'+'<span>'+t[1]+(isGuest()&&t[0]!=="market"?'<i class="lki">\ud83d\udd12</i>':'')+'</span>'+'</button>';}).join("");
 }
 document.addEventListener("click",function(e){
   var t=e.target.closest("[data-t]");if(t){tab=t.dataset.t;openRider=null;render();window.scrollTo(0,0);return;}
