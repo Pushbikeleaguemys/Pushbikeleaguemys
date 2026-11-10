@@ -24,7 +24,7 @@ var FIREBASE_API_KEY = 'AIzaSyCbnx37DZ_qn24snAHTptXkvkzh5nHNqdU';
 var REG_SHEET = 'Registrations';
 var REG_HEAD = ['Timestamp','UID','Email','Email Verified','Rider Name','Nickname','Team','Team Code','Date of Birth','Bib','Parent Name','Phone','Status','Rider ID'];
 var C = {TS:1,UID:2,EMAIL:3,VER:4,NAME:5,NICK:6,TEAM:7,CODE:8,DOB:9,BIB:10,PARENT:11,PHONE:12,STATUS:13,RID:14};
-var TEAM_CODES = {CPB:'CorePushBike',KLR:'KL Rocket',ADD:'ADDA Cycle',JBR:'JB Rocket',RAF:'Rafa Kids',LIR:'Lion Rocket',MEI:'M8',PRS:'Pro Selangor',FWN:'Fawn Speed',DKH:'Dark Horse',TOR:'Tornado Rider',SHK:'Sharkspeed'};
+var TEAM_CODES = {CPB:'CorePushBike',KLR:'KL Rocket',ADD:'ADDA Cycle',JBR:'JB Rocket',RAF:'Rafa Kids',LIR:'Lion Rocket',M8:'M8',PRS:'Pro Selangor',FWN:'Fawn Speed',DKH:'Dark Horse',TOR:'Tornado Rider',SHK:'Sharkspeed'};
 var RIDER_DOMAIN = 'rider.pushbikeleague.my';
 
 function ss_(){ return SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet(); }

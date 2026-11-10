@@ -1467,7 +1467,7 @@ select{width:100%;margin-top:6px;font:inherit;font-size:15px;color:var(--ink);ba
         <label>Rider name<input type="text" name="rname" placeholder="Full name as on race entry" required></label>
         <div class="row two">
           <label>Nickname<input type="text" name="nick" placeholder="e.g. Speedy"></label>
-          <label>Team<select name="team" required><option value="" selected disabled>Choose your team</option><option value="CPB">CorePushBike (CPB)</option><option value="KLR">KL Rocket (KLR)</option><option value="ADD">ADDA Cycle (ADD)</option><option value="JBR">JB Rocket (JBR)</option><option value="RAF">Rafa Kids (RAF)</option><option value="LIR">Lion Rocket (LIR)</option><option value="MEI">M8 (MEI)</option><option value="PRS">Pro Selangor (PRS)</option><option value="FWN">Fawn Speed (FWN)</option><option value="DKH">Dark Horse (DKH)</option><option value="TOR">Tornado Rider (TOR)</option><option value="SHK">Sharkspeed (SHK)</option></select></label>
+          <label>Team<select name="team" required><option value="" selected disabled>Choose your team</option><option value="CPB">CorePushBike (CPB)</option><option value="KLR">KL Rocket (KLR)</option><option value="ADD">ADDA Cycle (ADD)</option><option value="JBR">JB Rocket (JBR)</option><option value="RAF">Rafa Kids (RAF)</option><option value="LIR">Lion Rocket (LIR)</option><option value="M8">M8</option><option value="PRS">Pro Selangor (PRS)</option><option value="FWN">Fawn Speed (FWN)</option><option value="DKH">Dark Horse (DKH)</option><option value="TOR">Tornado Rider (TOR)</option><option value="SHK">Sharkspeed (SHK)</option></select></label>
         </div>
         <div class="row two">
           <label>Date of birth<input type="date" name="dob" required></label>
@@ -1521,7 +1521,7 @@ var MODE="",TABS={board:1,races:1,riders:1,market:1,rules:1,admin:1};
 
 var CFG={apiKey:"AIzaSyCbnx37DZ_qn24snAHTptXkvkzh5nHNqdU",authDomain:"pushbike-leaguemy.firebaseapp.com",projectId:"pushbike-leaguemy",storageBucket:"pushbike-leaguemy.firebasestorage.app",messagingSenderId:"200431257161",appId:"1:200431257161:web:81d19aacfc09667f566198"};
 var RD="rider.pushbikeleague.my",SDK="https://www.gstatic.com/firebasejs/10.14.1/",FBP=null;
-var TEAMS={CPB:"CorePushBike",KLR:"KL Rocket",ADD:"ADDA Cycle",JBR:"JB Rocket",RAF:"Rafa Kids",LIR:"Lion Rocket",MEI:"M8",PRS:"Pro Selangor",FWN:"Fawn Speed",DKH:"Dark Horse",TOR:"Tornado Rider",SHK:"Sharkspeed"};
+var TEAMS={CPB:"CorePushBike",KLR:"KL Rocket",ADD:"ADDA Cycle",JBR:"JB Rocket",RAF:"Rafa Kids",LIR:"Lion Rocket",M8:"M8",PRS:"Pro Selangor",FWN:"Fawn Speed",DKH:"Dark Horse",TOR:"Tornado Rider",SHK:"Sharkspeed"};
 function toEmail(v){v=String(v||"").trim();return/^cpb\d{3}$/i.test(v)?v.toLowerCase()+"@"+RD:v.toLowerCase();}
 function isRider(u){return!!u&&new RegExp("^cpb\\d{3}@"+RD.replace(/\./g,"\\.")+"$","i").test(u.email||"");}
 function fb(){if(!FBP)FBP=Promise.all([import(SDK+"firebase-app.js"),import(SDK+"firebase-auth.js")]).then(function(m){var app=m[0].initializeApp(CFG),A=m[1];return{A:A,auth:A.getAuth(app)};});return FBP;}
