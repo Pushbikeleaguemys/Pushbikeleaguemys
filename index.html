@@ -854,6 +854,8 @@ document.addEventListener("keydown",function(e){
 /* Shared marketplace store: Google Apps Script web app (Google Sheet + Drive photos).
    Paste your web app URL below, e.g. "https://script.google.com/macros/s/XXXX/exec" */
 window.__cpbDB=null;var MK_DB="https://script.google.com/macros/s/AKfycbzpASg3w93J9zZh2YWd_6rHsoozg0EUCsiClXiNpJdw_QlIgLZjFWOx_gCdPnb2VcI/exec";
+/* Race events backend: paste the web app URL of the events script (backend/events-backend.gs). Leave "" to keep using MK_DB. */
+var EV_DB="https://script.google.com/macros/s/AKfycbySbvdADqHzoegS1oB0groSDz-xiu3zOCl9gCvDoqwqCYLLPQF8z9f-DklJRs86T59ERA/exec";
 var LSM="cpb_market_mine_v1",LSC="cpb_market_cache_v1",LSO="cpb_market_own_v1";
 var mkDraft=null,mkSaving=false,mkCatSel="all";
 var MKCATS=[["all","All"],["bikes","Bikes"],["helmets","Helmets"],["protection","Protection"],["apparel","Apparel"],["accessories","Accessories"]];
@@ -877,6 +879,8 @@ try{SHARED=JSON.parse(localStorage.getItem(LSC)||"[]");if(!Array.isArray(SHARED)
 try{OWN=JSON.parse(localStorage.getItem(LSO)||"[]");if(!Array.isArray(OWN))OWN=[];}catch(_){OWN=[];}
 window.__cpbDB=MK_DB;
 function mkReady(){return/^https:\/\//.test(MK_DB);}
+function gUrl(kind){return(kind==="events"&&/^https:\/\//.test(EV_DB))?EV_DB:MK_DB;}
+function evKey(){var k="";try{k=localStorage.getItem("cpb_akey_ev")||"";if(!k){k=prompt("Enter the race events admin key (ADMIN_KEY in your events Google script)")||"";if(k)localStorage.setItem("cpb_akey_ev",k);}}catch(_){}return k;}
 function mkUrl(id){return MK_DB.replace(/\/+$/,"")+"/market"+(id?"/"+encodeURIComponent(id):"")+".json";}
 function mkCache(){try{localStorage.setItem(LSC,JSON.stringify(SHARED));}catch(_){}}
 function mkOwnSave(){try{localStorage.setItem(LSO,JSON.stringify(OWN));}catch(_){}}
@@ -886,13 +890,14 @@ function mkFind(id){for(var i=0;i<SHARED.length;i++)if(SHARED[i].id===id)return 
 function mkCan(x){return ADMIN||mkIsOwn(x.id);}
 function mkToken(){var t="";try{t=localStorage.getItem("cpb_mk_token")||"";if(!t){t=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("cpb_mk_token",t);}}catch(_){t="anon"+Date.now();}return t;}
 function adminKey(){var k="";try{k=localStorage.getItem("cpb_akey")||"";if(!k){k=prompt("Enter the marketplace admin key (ADMIN_KEY in your Google script)")||"";if(k)localStorage.setItem("cpb_akey",k);}}catch(_){}return k;}
-function gPost(p){return fetch(MK_DB,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(p)}).then(function(r){if(!r.ok)throw new Error("http "+r.status);return r.json();}).then(function(j){if(j&&j.error){if(j.error==="forbidden"){try{localStorage.removeItem("cpb_akey");}catch(_){}}throw new Error(j.error);}return j;});}
-function mkUpPhotos(arr){var out=[],ch=Promise.resolve();(arr||[]).forEach(function(u){ch=ch.then(function(){if(String(u).indexOf("data:")!==0){out.push(u);return;}return gPost({action:"upload",data:u,token:mkToken()}).then(function(j){out.push(j.url);});});});return ch.then(function(){return out;});}
+function gPost(p,url){return fetch(url||MK_DB,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(p)}).then(function(r){if(!r.ok)throw new Error("http "+r.status);return r.json();}).then(function(j){if(j&&j.error){if(j.error==="forbidden"){try{localStorage.removeItem(url?"cpb_akey_ev":"cpb_akey");}catch(_){}}throw new Error(j.error);}return j;});}
+function mkUpPhotos(arr,url,key){var out=[],ch=Promise.resolve();(arr||[]).forEach(function(u){ch=ch.then(function(){if(String(u).indexOf("data:")!==0){out.push(u);return;}return gPost({action:"upload",data:u,token:mkToken(),key:key||""},url).then(function(j){out.push(j.url);});});});return ch.then(function(){return out;});}
 function gApi(kind,method,id,body){
-  if(method==="GET")return fetch(MK_DB+(MK_DB.indexOf("?")<0?"?":"&")+"kind="+kind+"&t="+Date.now()).then(function(r){if(!r.ok)throw new Error("http "+r.status);return r.json();});
+  var U=gUrl(kind),sep=(U!==MK_DB);
+  if(method==="GET")return fetch(U+(U.indexOf("?")<0?"?":"&")+"kind="+kind+"&t="+Date.now()).then(function(r){if(!r.ok)throw new Error("http "+r.status);return r.json();});
   var pre=Promise.resolve();
-  if(method!=="DELETE"&&body&&body.photos&&body.photos.length)pre=mkUpPhotos(body.photos).then(function(u){body.photos=u;});
-  return pre.then(function(){var p={action:method==="DELETE"?"delete":"put",kind:kind,id:id,token:mkToken(),key:ADMIN?adminKey():""};if(body!==undefined)p.rec=body;return gPost(p);});
+  if(method!=="DELETE"&&body&&body.photos&&body.photos.length)pre=(sep?Promise.resolve(ADMIN?evKey():""):Promise.resolve()).then(function(k){return mkUpPhotos(body.photos,sep?U:undefined,sep?k:undefined);}).then(function(u){body.photos=u;});
+  return pre.then(function(){var p={action:method==="DELETE"?"delete":"put",kind:kind,id:id,token:mkToken(),key:ADMIN?(sep?evKey():adminKey()):""};if(body!==undefined)p.rec=body;return gPost(p,sep?U:undefined);});
 }
 function mkReq(method,id,body){return gApi("market",method,id,body);}
 function mkFetch(force){
@@ -916,8 +921,8 @@ function mkMigrate(){
   });
 }
 function rm(n){return"RM "+Number(n).toLocaleString("en-MY",{maximumFractionDigits:2});}
-async function mkPhoto(blob){
-  var bm=await createImageBitmap(blob),s=Math.min(1,640/bm.width,640/bm.height),w=Math.max(1,Math.round(bm.width*s)),h=Math.max(1,Math.round(bm.height*s));
+async function mkPhoto(blob,mx){
+  mx=mx||640;var bm=await createImageBitmap(blob),s=Math.min(1,mx/bm.width,mx/bm.height),w=Math.max(1,Math.round(bm.width*s)),h=Math.max(1,Math.round(bm.height*s));
   var c=document.createElement("canvas");c.width=w;c.height=h;var g=c.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,w,h);g.drawImage(bm,0,0,w,h);if(bm.close)bm.close();
   return c.toDataURL("image/jpeg",0.75);
 }
@@ -1144,7 +1149,7 @@ document.addEventListener("click",function(e){
 });
 document.addEventListener("change",function(e){
   var t=e.target;if(!t||t.id!=="ev_file"||!t.files||!t.files[0])return;
-  mkPhoto(t.files[0]).then(function(u){EVPIC=u;var pv=$("ev_pv"),rb=$("ev_rm");if(pv){pv.src=u;pv.style.display="block";}if(rb)rb.style.display="";}).catch(function(){toast("Could not read that image");});
+  mkPhoto(t.files[0],1000).then(function(u){EVPIC=u;var pv=$("ev_pv"),rb=$("ev_rm");if(pv){pv.src=u;pv.style.display="block";}if(rb)rb.style.display="";}).catch(function(){toast("Could not read that image");});
 });
 evFetch(true);
 setInterval(function(){if(tab==="races"&&!document.hidden&&!document.querySelector("#modal.on"))evFetch(true);},30000);
