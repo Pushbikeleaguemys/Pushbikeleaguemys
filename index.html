@@ -174,9 +174,9 @@ details.lg{margin:10px 0}details.lg>summary{cursor:pointer;font-weight:700;paddi
 details.lg[open]>summary{border-radius:14px 14px 0 0}
 
 .evcarw{position:relative;margin:0 -12px}
-.evcar{position:relative;display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:14px calc(50% - min(72vw,270px)/2) 16px;overscroll-behavior-x:contain}
+.evcar{position:relative;display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:14px calc(50% - min(86vw,340px)/2) 16px;overscroll-behavior-x:contain}
 .evcar::-webkit-scrollbar{display:none}
-.evk{flex:none;width:min(72vw,270px);scroll-snap-align:center;background:var(--card);border-radius:20px;padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.10);transition:transform .15s ease-out,opacity .15s ease-out;transform-origin:center;border-top:4px solid var(--lime)}
+.evk{flex:none;width:min(86vw,340px);scroll-snap-align:center;background:var(--card);border-radius:20px;padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.10);transition:transform .15s ease-out,opacity .15s ease-out;transform-origin:center;border-top:4px solid var(--lime)}
 .evk .evkd{display:flex;align-items:center;gap:12px}
 .evk .evbig{background:var(--hero);color:var(--lime);border-radius:14px;min-width:64px;padding:8px 6px;text-align:center;font-weight:800;font-size:28px;line-height:1}
 .evk .evbig small{display:block;font-size:11px;font-weight:700;color:#fff;opacity:.8;text-transform:uppercase;margin-top:4px}
@@ -184,8 +184,9 @@ details.lg[open]>summary{border-radius:14px 14px 0 0}
 .evk .evn{font-weight:800;font-size:17px;margin:12px 0 6px;word-break:break-word;line-height:1.25}
 .evk .evl{color:var(--muted);font-size:13px}
 .evk .evadm{display:flex;gap:6px;margin-top:12px}
-.evposter{display:block;width:100%;max-height:190px;object-fit:cover;border-radius:12px;margin:0 0 10px;background:#0002;cursor:zoom-in}
+.evposter{display:block;width:100%;max-height:340px;object-fit:contain;border-radius:12px;margin:0 0 12px;background:#0003;cursor:zoom-in}
 .evcard .evposter{width:64px;height:64px;max-height:64px;margin:0 10px 0 0;flex:none;border-radius:10px}
+.evk .evlink{display:block;text-align:center;margin-top:10px;padding:10px 14px;font-size:14px}
 .evlink{display:inline-block;margin-top:8px;padding:7px 12px;border-radius:999px;background:var(--hot,#e11d48);color:#fff!important;font-weight:700;font-size:13px;text-decoration:none}
 .evcard .evlink{margin-top:4px;padding:4px 10px;font-size:12px}
 .evpv{display:block;max-width:100%;max-height:160px;border-radius:12px;margin:6px 0}
@@ -1164,7 +1165,7 @@ function evBarrel(){
   var mid=c.scrollLeft+c.clientWidth/2,best=0,bd=1e9,kids=Array.prototype.slice.call(c.children);
   kids.forEach(function(k,i){
     var cx=k.offsetLeft+k.offsetWidth/2,dist=Math.abs(cx-mid),d=Math.min(1,dist/(c.clientWidth*0.6));
-    k.style.transform="scale("+(1-0.14*d).toFixed(3)+")";k.style.opacity=(1-0.5*d).toFixed(2);
+    k.style.transform="scale("+(1-0.10*d).toFixed(3)+")";k.style.opacity=(1-0.5*d).toFixed(2);
     if(dist<bd){bd=dist;best=i;}
   });
   var n=document.getElementById("evcnt");if(n)n.textContent=(best+1)+" / "+kids.length;
