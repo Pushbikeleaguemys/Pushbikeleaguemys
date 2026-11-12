@@ -72,6 +72,19 @@ h3{margin:4px 2px 8px;font-size:13px;text-transform:uppercase;letter-spacing:.5p
 .kv div{background:var(--chip);border-radius:12px;padding:10px 6px;text-align:center}.kv b{display:block;font-size:20px}.kv span{font-size:11px;color:var(--muted)}
 .badges{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
 .badge{background:var(--chip);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
+.tgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+@media(min-width:720px){.tgrid{grid-template-columns:repeat(4,1fr)}}
+.tcard{background:var(--card);border-radius:16px;padding:16px 10px 14px;text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;border:1px solid transparent}
+.tcard:active{transform:scale(.98)}.tcard.mine{border-color:var(--lime)}
+.tcard b{font-size:14px;line-height:1.2;word-break:break-word}.tcard span{font-size:12px;color:var(--muted)}
+.tlogo{width:72px;height:72px;border-radius:18px;object-fit:contain;background:#fff;display:block;flex:none}
+.tlogo.ini{background:#1b1f26;color:var(--lime);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;letter-spacing:.5px;background-image:none}
+.tlogo.big{width:104px;height:104px;border-radius:24px;font-size:26px}
+.tcard.locked{opacity:.6}.tmine.lk{background:none;font-size:13px}
+.tmine{position:absolute;top:8px;right:8px;font-size:11px;font-weight:800;color:var(--lime-ink,#1a2300);background:var(--lime);border-radius:999px;padding:2px 8px}
+.thead .tlogo{margin:0 auto}.thead{text-align:center}.thead h2{margin:10px 0 2px}.thead .sub{color:var(--muted);font-size:13px}
+.tadm{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+.tadm button{border:0;border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;font-weight:700;background:var(--chip);color:var(--ink);cursor:pointer}
 .back{border:0;background:none;color:var(--hot);font:inherit;font-weight:700;padding:4px 0 10px}
 .bars{display:flex;align-items:flex-end;gap:5px;height:64px;margin:8px 0 2px}
 .bars div{flex:1;background:var(--lime);border-radius:4px 4px 0 0;min-height:2px;position:relative}
@@ -296,9 +309,10 @@ function toast(t){var e=$("toast");e.textContent=t;e.classList.add("show");clear
 syncData();
 
 /* ---- standings ---- */
-function standings(group){
+function isTeamId(id,code){return new RegExp("^"+code+"\\d+$","i").test(id||"");}
+function standings(group,team){
   var m={};
-  RIDERS.forEach(function(r){m[r.id]={r:r,pts:0,bonus:0,races:0,w:0,p2:0,p3:0,pod:0,top10:0,best:null};});
+  RIDERS.forEach(function(r){if(team&&!isTeamId(r.id,team))return;m[r.id]={r:r,pts:0,bonus:0,races:0,w:0,p2:0,p3:0,pod:0,top10:0,best:null};});
   RES.forEach(function(x){
     if(group!=null&&gkey(x)!==group)return;
     var s=m[x.rid];if(!s)return;
@@ -338,9 +352,10 @@ function renderHeaderStats(){
   $("stats").innerHTML=[[RIDERS.length,"Riders"],[active,"Racing"],[RES.length,"Results"],[Object.keys(events).length,"Events"]].map(function(a){return '<div class="stat"><b>'+a[0]+'</b><span>'+a[1]+'</span></div>';}).join("");
 }
 function pill(label,on,attr){return '<button class="pill'+(on?' on':'')+'" '+attr+'>'+label+'</button>';}
-function viewBoard(){
-  var list=standings(grp),ranked=list.filter(function(s){return s.races>0;}),unr=list.filter(function(s){return s.races===0;});
-  var h='<div class="seg">'+pill("Overall",grp==null,'data-g="all"')+GROUPS.map(function(g){return pill(gLabel(g),grp===g,'data-g="'+g+'"');}).join("")+'</div>';
+function viewBoard(){return boardHtml(null,grp,"data-g");}
+function boardHtml(team,grp,gattr){
+  var list=standings(grp,team),ranked=list.filter(function(s){return s.races>0;}),unr=list.filter(function(s){return s.races===0;});
+  var h='<div class="seg">'+pill("Overall",grp==null,gattr+'="all"')+GROUPS.map(function(g){return pill(gLabel(g),grp===g,gattr+'="'+g+'"');}).join("")+'</div>';
   if(ranked.length){
     var t=ranked[0];
     h+='<div class="pole"><span class="tag">POLE POSITION</span><div class="pts"><b>'+t.pts+'</b><span>POINTS</span></div><div class="prow">'+(picOf(t.r)?'<div class="pav"><img src="'+picOf(t.r)+'" alt=""></div>':'<div class="pav lockd">'+sil()+'</div>')+'<div><h2>'+esc(t.r.nick)+'</h2><div class="sub">'+(grp==null?"Overall 2026":gLabel(grp))+' · '+t.pod+' podiums · '+t.races+' races</div></div></div></div>';
@@ -415,6 +430,7 @@ function render(){
   if(openRider)h=viewProfile(openRider);
   else if(tab==="board")h=viewBoard();
   else if(tab==="races")h=viewRaces();
+  else if(tab==="team")h=viewTeams();
   else if(tab==="riders")h=viewRiders();
   else if(tab==="market")h=viewMarket();
   else if(tab==="admin"&&ADMIN)h=viewAdmin();
@@ -422,10 +438,10 @@ function render(){
   if(isGuest()&&(openRider||!openTab(tab)))h=lockedView(h);
   v.innerHTML=h;
   var mk=(!openRider&&tab==="market"),hT=$("hdrT"),hS=$("hdrS"),hst=$("stats");
-  if(hT)hT.innerHTML=mk?'PUSHBIKE <span>MARKETPLACE</span>':'CORE<span>PUSHBIKE</span> LEAGUE';
+  if(hT)hT.innerHTML=mk?'PUSHBIKE <span>MARKETPLACE</span>':(!openRider&&tab==="board")?'PUSHBIKE LEAGUE <span>MALAYSIA</span>':(!openRider&&tab==="team"&&curTeam)?'TEAM <span>'+esc(teamName(curTeam).toUpperCase())+'</span>':'CORE<span>PUSHBIKE</span> LEAGUE';
   if(hS)hS.textContent=mk?'Buy and sell pushbike gear':'2026 season \u00b7 finishing points + overseas bonus';
   if(hst)hst.style.display=mk?"none":"";
-  var T=[["board","Pole position",'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>'],["races","Races",'<path d="M4 21V4M4 5h13l-2 4 2 4H4"/>'],["riders","Riders",'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 5a3.2 3.2 0 0 1 0 6M18 14.8c1.8.6 3 2.2 3.5 5"/>']];
+  var T=[["board","Pole position",'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>'],["races","Races",'<path d="M4 21V4M4 5h13l-2 4 2 4H4"/>'],["team","Team",'<path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/>'],["riders","Riders",'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 5a3.2 3.2 0 0 1 0 6M18 14.8c1.8.6 3 2.2 3.5 5"/>']];
   T.push(["market","Marketplace",'<path d="M6 7h12l1 13H5L6 7z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/>']);
   if(ADMIN)T.push(["admin","Admin",'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']);
   $("tabs").style.gridTemplateColumns="repeat("+T.length+",1fr)";
@@ -448,7 +464,7 @@ async function copyBoard(){
 /* ================= ADMIN: login, editing, Excel sync ================= */
 var AUTH_ID="admin",AUTH_HASH="cc0b7906c1de4708f8888a45850be22b430dcd643a3d082bb7c9ce15161512be";
 var ADMIN=false;try{ADMIN=sessionStorage.getItem("cpb_admin")==="1";}catch(_){}
-function openTab(t){return t==="market"||t==="board"||t==="races";}
+function openTab(t){return t==="market"||t==="board"||t==="races"||t==="team";}
 function isGuest(){if(ADMIN)return false;try{return!localStorage.getItem("cpb_member");}catch(_){return true;}}
 function lockedView(inner){var U=window.__cpbUser,st=U&&U.state,c;
   function B(a,t,p){return'<button type="button" class="'+(p?'p':'')+'" data-auth="'+a+'">'+t+'</button>';}
@@ -1312,6 +1328,51 @@ window.__cpbHero={
   upload:function(file){if(!pReady())return Promise.reject(new Error("Google Drive is not connected"));return heroAuth().then(function(){return heroFit(file);}).then(function(u){return dpUpload(HERO_ID,u,"");});},
   remove:function(){return heroAuth().then(function(){return dpPost({action:"delpic",rid:HERO_ID,auth:dpAuth()});}).then(function(){delete DPICS[HERO_ID];dpCache();});}
 };
+/* ---- Team tab: pick a team, see its riders; admin uploads the team logo (stored in Google Drive with rider photos as TEAM_<code>) ---- */
+var TEAM_LIST=[["CPB","CorePushBike"],["KLR","KL Rocket"],["ADD","ADDA Cycle"],["JBR","JB Rocket"],["RAF","Rafa Kids"],["LIR","Lion Rocket"],["M8","M8"],["PRS","Pro Selangor"],["FWN","Fawn Speed"],["DKH","Dark Horse"],["TOR","Tornado Rider"],["SHK","Sharkspeed"]];
+var curTeam=null,teamGrp=null;
+function myTeam(){var U=window.__cpbUser;if(!U||isGuest())return"";var t=String(U.team||"").toUpperCase();if(!t&&U.riderId)t=String(U.riderId).replace(/\d+$/,"").toUpperCase();return t;}
+function canOpenTeam(code){return!!ADMIN||(!!code&&myTeam()===code);}
+function teamRiders(code){return RIDERS.filter(function(r){return isTeamId(r.id,code);});}
+function teamName(code){for(var i=0;i<TEAM_LIST.length;i++)if(TEAM_LIST[i][0]===code)return TEAM_LIST[i][1];return code;}
+function teamLogo(code){var d=DPICS["TEAM_"+code];if(d&&d.id)return"https://lh3.googleusercontent.com/d/"+encodeURIComponent(d.id);return(D.teamLogos&&D.teamLogos[code])||"";}
+function teamBadge(code,big){var u=teamLogo(code);return u?'<img class="tlogo'+(big?' big':'')+'" src="'+esc(u)+'" alt="'+esc(teamName(code))+' logo" loading="lazy">':'<div class="tlogo ini'+(big?' big':'')+'">'+esc(code)+'</div>';}
+function viewTeams(){
+  if(curTeam&&(!TEAM_LIST.some(function(t){return t[0]===curTeam;})||!canOpenTeam(curTeam)))curTeam=null;
+  if(!curTeam){
+    return'<h3>Select your team</h3><div class="tgrid">'+TEAM_LIST.map(function(t){var n=teamRiders(t[0]).length;
+      var ok=canOpenTeam(t[0]),mine=myTeam()===t[0];
+      return'<div class="tcard'+(mine?' mine':'')+(ok?'':' locked')+'" data-team="'+t[0]+'" role="button" tabindex="0">'+(mine?'<i class="tmine">My team</i>':ok?'':'<i class="tmine lk">\ud83d\udd12</i>')+teamBadge(t[0])+'<b>'+esc(t[1])+'</b><span>'+n+(n===1?' rider':' riders')+'</span></div>';}).join("")+'</div><p class="note" style="margin:2px 4px 12px">You can open your own team only. Other teams are locked.</p>';
+  }
+  var code=curTeam,riders=teamRiders(code),pts=standings(null,code).reduce(function(a,x){return a+(x.pts||0);},0);
+  var h='<button class="back" id="tback" type="button">\u2039 All teams</button><div class="card thead">'+teamBadge(code,true)+'<h2>'+esc(teamName(code))+'</h2><div class="sub">'+riders.length+(riders.length===1?' rider':' riders')+' \u00b7 '+pts+' pts</div>'
+   +(ADMIN?'<div class="tadm"><button type="button" data-act="team-logo">\ud83d\udcf7 '+(teamLogo(code)?'Change':'Upload')+' logo</button>'+(teamLogo(code)?'<button type="button" data-act="team-logo-clear" style="color:var(--hot)">Remove logo</button>':'')+'<input type="file" id="tm_file" accept="image/*" hidden></div>':'')+'<div class="note" id="tm_msg" style="margin-top:8px"></div></div>';
+  if(!riders.length)return h+'<div class="card empty">No riders in this team yet.</div>';
+  return h+boardHtml(code,teamGrp,"data-tg");
+}
+function teamFit(blob){return createImageBitmap(blob).then(function(bm){var s=Math.min(1,512/bm.width,512/bm.height),w=Math.max(1,Math.round(bm.width*s)),h=Math.max(1,Math.round(bm.height*s));var c=document.createElement("canvas");c.width=w;c.height=h;var g=c.getContext("2d");g.drawImage(bm,0,0,w,h);if(bm.close)bm.close();return/png|webp|gif|svg/.test(blob.type)?c.toDataURL("image/png"):(function(){var o=document.createElement("canvas");o.width=w;o.height=h;var og=o.getContext("2d");og.fillStyle="#fff";og.fillRect(0,0,w,h);og.drawImage(c,0,0);return o.toDataURL("image/jpeg",0.88);})();});}
+function teamMsg(t){var m=$("tm_msg");if(m)m.textContent=t||"";}
+document.addEventListener("click",function(e){if(e.target.closest&&e.target.closest('[data-t="team"]'))curTeam=null;},true);
+document.addEventListener("click",function(e){
+  var c=e.target.closest("[data-team]");if(c){var tc=c.dataset.team;if(!canOpenTeam(tc)){toast(isGuest()?"Log in as a team member to open your team":"Only "+teamName(tc)+" members can open this team");return;}curTeam=tc;teamGrp=null;render();window.scrollTo(0,0);return;}
+  var tg=e.target.closest("[data-tg]");if(tg){teamGrp=tg.dataset.tg==="all"?null:parseInt(tg.dataset.tg,10);render();return;}
+  if(e.target.id==="tback"){curTeam=null;render();window.scrollTo(0,0);return;}
+  var a=e.target.closest("[data-act]");if(!a||!curTeam)return;var act=a.dataset.act;
+  if(act==="team-logo"&&ADMIN){var fi=$("tm_file");if(fi)fi.click();}
+  else if(act==="team-logo-clear"&&ADMIN){
+    if(!confirm("Remove the logo for "+teamName(curTeam)+"?"))return;var code=curTeam;teamMsg("Removing\u2026");
+    var p=pReady()?heroAuth().then(function(){return dpPost({action:"delpic",rid:"TEAM_"+code,auth:dpAuth()});}).then(function(){delete DPICS["TEAM_"+code];dpCache();}):Promise.resolve().then(function(){if(D.teamLogos)delete D.teamLogos[code];save();});
+    p.then(function(){render();}).catch(function(er){teamMsg((er&&er.message)||"Could not remove");});
+  }
+});
+document.addEventListener("change",function(e){
+  if(e.target.id!=="tm_file"||!ADMIN||!curTeam)return;var f=e.target.files&&e.target.files[0];if(!f)return;var code=curTeam;teamMsg("Uploading\u2026");
+  teamFit(f).then(function(u){
+    if(pReady())return heroAuth().then(function(){return dpUpload("TEAM_"+code,u,"");});
+    D.teamLogos=D.teamLogos||{};D.teamLogos[code]=u;if(!save())throw new Error("Browser storage is full");
+  }).then(function(){render();toast("Team logo saved");}).catch(function(er){teamMsg((er&&er.message)||"Upload failed");});
+  e.target.value="";
+});
 window.__cpbRefresh=function(){try{render();}catch(_){}};
 window.__cpbGo=function(t,rid){if(t==="admin"&&!ADMIN)t="board";tab=t;openRider=rid&&byId[rid]?rid:null;render();window.scrollTo(0,0);};
 renderHeaderStats();render();
@@ -1554,7 +1615,7 @@ var host=document.getElementById("welcomeHost"),appRoot=document.getElementById(
 var root=host.attachShadow({mode:"open"});
 root.appendChild(document.getElementById("tpl-welcome").content.cloneNode(true));
 var shell=root.querySelector(".shell"),sig=root.querySelector(".signup"),form=root.querySelector("form.reg"),lform=root.querySelector("form.lf");
-var MODE="",TABS={board:1,races:1,riders:1,market:1,rules:1,admin:1};
+var MODE="",TABS={board:1,races:1,team:1,riders:1,market:1,rules:1,admin:1};
 
 var CFG={apiKey:"AIzaSyCbnx37DZ_qn24snAHTptXkvkzh5nHNqdU",authDomain:"pushbike-leaguemy.firebaseapp.com",projectId:"pushbike-leaguemy",storageBucket:"pushbike-leaguemy.firebasestorage.app",messagingSenderId:"200431257161",appId:"1:200431257161:web:81d19aacfc09667f566198"};
 var RD="rider.pushbikeleague.my",SDK="https://www.gstatic.com/firebasejs/10.14.1/",FBP=null;
