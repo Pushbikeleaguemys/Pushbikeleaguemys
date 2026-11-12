@@ -1200,7 +1200,7 @@ function dpFetch(){
   if(!pReady()||dpBusy)return;dpBusy=true;
   fetch(PHOTO_API+(PHOTO_API.indexOf("?")<0?"?":"&")+"t="+Date.now()).then(function(r){return r.json();}).then(function(j){
     if(!j||!j.ok||!j.pics)return;
-    var changed=JSON.stringify(j.pics)!==JSON.stringify(DPICS);DPICS=j.pics;dpCache();
+    var changed=JSON.stringify(j.pics)!==JSON.stringify(DPICS);DPICS=j.pics;dpCache();try{if(window.__cpbHeroSync)window.__cpbHeroSync();}catch(_){}
     if(changed&&!document.querySelector("#modal.on"))render();
   }).catch(function(){}).then(function(){dpBusy=false;});
 }
@@ -1294,6 +1294,24 @@ document.addEventListener("input",function(e){if(e.target&&/^r_date$/.test(e.tar
 document.addEventListener("change",function(e){if(e.target&&/^r_(rid|mode|date)$/.test(e.target.id))resPreview();});
 window.__cpb={market:function(){return mkAll().map(function(x){return Object.assign({},x,{catKey:mkCatOf(x),catLabel:mkCatLabel(x)});});},derive:derive,parseWorkbook:parseWorkbook,buildImport:buildImport,sha256:sha256,get D(){return D;}};
 
+/* ---- home-page hero photo: stored with the rider photos on Google Drive under the id SITE_HERO ---- */
+var HERO_ID="SITE_HERO";
+function heroAuth(){
+  if(!ADMIN)return Promise.reject(new Error("Log in as admin first"));
+  if(ADMIN_PW)return Promise.resolve();
+  var pw=prompt("Admin password (needed to save to Google Drive)");
+  if(!pw)return Promise.reject(new Error("Cancelled"));
+  if(sha256("cpb|"+AUTH_ID+"|"+pw)!==AUTH_HASH)return Promise.reject(new Error("Wrong admin password"));
+  ADMIN_PW=pw;return Promise.resolve();
+}
+function heroFit(blob){return createImageBitmap(blob).then(function(bm){var s=Math.min(1,1600/bm.width,1200/bm.height),w=Math.max(1,Math.round(bm.width*s)),h=Math.max(1,Math.round(bm.height*s));var c=document.createElement("canvas");c.width=w;c.height=h;var g=c.getContext("2d");g.fillStyle="#000";g.fillRect(0,0,w,h);g.drawImage(bm,0,0,w,h);if(bm.close)bm.close();return c.toDataURL("image/jpeg",0.82);});}
+window.__cpbHero={
+  url:function(){var d=DPICS[HERO_ID];return d&&d.id?"https://lh3.googleusercontent.com/d/"+encodeURIComponent(d.id):"";},
+  isAdmin:function(){return!!ADMIN;},
+  ready:function(){return pReady();},
+  upload:function(file){if(!pReady())return Promise.reject(new Error("Google Drive is not connected"));return heroAuth().then(function(){return heroFit(file);}).then(function(u){return dpUpload(HERO_ID,u,"");});},
+  remove:function(){return heroAuth().then(function(){return dpPost({action:"delpic",rid:HERO_ID,auth:dpAuth()});}).then(function(){delete DPICS[HERO_ID];dpCache();});}
+};
 window.__cpbRefresh=function(){try{render();}catch(_){}};
 window.__cpbGo=function(t,rid){if(t==="admin"&&!ADMIN)t="board";tab=t;openRider=rid&&byId[rid]?rid:null;render();window.scrollTo(0,0);};
 renderHeaderStats();render();
@@ -1316,6 +1334,16 @@ renderHeaderStats();render();
 .sbtn.fill{border:1px solid var(--lime);background:var(--lime);color:var(--lime-ink)}
 /* hero */
 .hero{position:relative;overflow:hidden;border-radius:24px;padding:34px 22px 28px;margin-top:6px;background:radial-gradient(120% 90% at 85% 0%,#243000 0%,#11150a 45%,#0b0d10 100%);border:1px solid var(--line)}
+.hero .herobg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;opacity:0;transition:opacity .4s}
+.hero .herobg:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,8,6,.5),rgba(6,8,6,.82))}
+.hero.hasbg .herobg{opacity:1}
+.hero.hasbg:before,.hero.hasbg:after{display:none}
+.hero>*:not(.herobg):not(.heroadm){position:relative;z-index:1}
+.heroadm{position:absolute;top:12px;right:12px;z-index:3;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.heroadm[hidden],.heroadm [hidden]{display:none!important}
+.heroadm .hb{border:0;border-radius:999px;padding:8px 12px;font:inherit;font-size:12px;font-weight:800;background:rgba(255,255,255,.92);color:#111;cursor:pointer}
+.heroadm .hm{font-size:12px;font-weight:700;color:#fff;background:rgba(0,0,0,.6);border-radius:8px;padding:4px 8px}
+@media(min-width:720px){.hero .herobg:after{background:linear-gradient(90deg,rgba(6,8,6,.9) 0%,rgba(6,8,6,.62) 48%,rgba(6,8,6,.12) 100%)}}
 .hero:before{content:"";position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;border:34px solid rgba(183,224,0,.12)}
 .hero:after{content:"";position:absolute;right:30px;bottom:-90px;width:200px;height:200px;border-radius:50%;border:26px solid rgba(232,64,42,.12)}
 .tag{display:inline-block;background:var(--lime);color:var(--lime-ink);font-weight:800;font-size:12px;letter-spacing:.8px;padding:4px 10px;border-radius:999px}
@@ -1417,6 +1445,8 @@ select{width:100%;margin-top:6px;font:inherit;font-size:15px;color:var(--ink);ba
 
   <div class="home">
   <section class="hero">
+    <div class="herobg"></div>
+    <div class="heroadm" hidden><button type="button" class="hb" data-hero="pick">📷 Change hero photo</button><button type="button" class="hb" data-hero="clear" hidden>Remove</button><span class="hm" hidden></span><input type="file" accept="image/*" id="heroFile" hidden></div>
     <span class="tag">2026 SEASON</span>
     <h1>Every race.<br>Every point.<br><em>One league.</em></h1>
     <p>Follow your little rider's journey on Pushbike League Mys. Finishing points, overseas bonus and year-of-birth rankings, all in one place.</p>
@@ -1641,7 +1671,27 @@ function live(){try{mkTiles(window.__cpb&&window.__cpb.market?window.__cpb.marke
     Object.keys(v).forEach(function(k){var b=root.querySelector('[data-k="'+k+'"]');if(b)b.textContent=v[k];});
   }catch(_){}
 }
-function showWelcome(view){
+function heroApply(){
+  var H=window.__cpbHero;if(!H)return;
+  var u=H.url(),bg=root.querySelector(".herobg"),hero=root.querySelector(".hero"),adm=root.querySelector(".heroadm");if(!bg||!hero)return;
+  if(u){var im=new Image();im.onload=function(){if(H.url()===u){bg.style.backgroundImage='url("'+u+'")';hero.classList.add("hasbg");}};im.src=u;}
+  else{bg.style.backgroundImage="";hero.classList.remove("hasbg");}
+  adm.hidden=!H.isAdmin();adm.querySelector('[data-hero="clear"]').hidden=!u;
+}
+window.__cpbHeroSync=heroApply;
+function heroMsg(t){var m=root.querySelector(".heroadm .hm");m.textContent=t;m.hidden=!t;}
+root.addEventListener("click",function(e){
+  var b=e.target.closest&&e.target.closest("[data-hero]");if(!b)return;var H=window.__cpbHero;if(!H)return;
+  if(b.dataset.hero==="pick")root.querySelector("#heroFile").click();
+  else if(confirm("Remove the hero photo?")){heroMsg("Removing…");H.remove().then(function(){heroMsg("");heroApply();}).catch(function(er){heroMsg((er&&er.message)||"Could not remove");});}
+});
+root.addEventListener("change",function(e){
+  if(e.target.id!=="heroFile")return;var f=e.target.files&&e.target.files[0];if(!f)return;var H=window.__cpbHero;
+  heroMsg("Uploading…");
+  H.upload(f).then(function(){heroMsg("Saved ✓");setTimeout(function(){heroMsg("");},2500);heroApply();}).catch(function(er){heroMsg((er&&er.message)||"Upload failed");});
+  e.target.value="";
+});
+function showWelcome(view){heroApply();
   MODE="welcome";appRoot.hidden=true;host.hidden=false;document.body.classList.add("mode-welcome");
   document.title="Pushbike League Mys";shell.setAttribute("data-view",view);
   if(view==="signup"||view==="login"){sig.classList.remove("sent");form.reset();lform.reset();setErr("reg","");setErr("login","");}
