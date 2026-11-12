@@ -426,22 +426,22 @@ function viewRules(){
 }
 
 function render(){
+  if(tab==="riders")tab="team";
   var v=$("view"),h="";
-  if(openRider)h=viewProfile(openRider);
+  if(openRider)h=canSeeRider(openRider)?viewProfile(openRider):blockedRider(openRider);
   else if(tab==="board")h=viewBoard();
   else if(tab==="races")h=viewRaces();
   else if(tab==="team")h=viewTeams();
-  else if(tab==="riders")h=viewRiders();
   else if(tab==="market")h=viewMarket();
   else if(tab==="admin"&&ADMIN)h=viewAdmin();
   else h=viewRules();
   if(isGuest()&&(openRider||!openTab(tab)))h=lockedView(h);
   v.innerHTML=h;
   var mk=(!openRider&&tab==="market"),hT=$("hdrT"),hS=$("hdrS"),hst=$("stats");
-  if(hT)hT.innerHTML=mk?'PUSHBIKE <span>MARKETPLACE</span>':(!openRider&&tab==="board")?'PUSHBIKE LEAGUE <span>MALAYSIA</span>':(!openRider&&tab==="team"&&curTeam)?'TEAM <span>'+esc(teamName(curTeam).toUpperCase())+'</span>':'CORE<span>PUSHBIKE</span> LEAGUE';
+  if(hT)hT.innerHTML=mk?'PUSHBIKE <span>MARKETPLACE</span>':(!openRider&&(tab==="board"||tab==="team"))?'PUSHBIKE LEAGUE <span>MALAYSIA</span>':'CORE<span>PUSHBIKE</span> LEAGUE';
   if(hS)hS.textContent=mk?'Buy and sell pushbike gear':'2026 season \u00b7 finishing points + overseas bonus';
   if(hst)hst.style.display=mk?"none":"";
-  var T=[["board","Pole position",'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>'],["races","Races",'<path d="M4 21V4M4 5h13l-2 4 2 4H4"/>'],["team","Team",'<path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/>'],["riders","Riders",'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 5a3.2 3.2 0 0 1 0 6M18 14.8c1.8.6 3 2.2 3.5 5"/>']];
+  var T=[["board","Pole position",'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>'],["races","Races",'<path d="M4 21V4M4 5h13l-2 4 2 4H4"/>'],["team","Team",'<path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6l8-3z"/>']];
   T.push(["market","Marketplace",'<path d="M6 7h12l1 13H5L6 7z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/>']);
   if(ADMIN)T.push(["admin","Admin",'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']);
   $("tabs").style.gridTemplateColumns="repeat("+T.length+",1fr)";
@@ -1334,6 +1334,10 @@ var curTeam=null,teamGrp=null;
 function myTeam(){var U=window.__cpbUser;if(!U||isGuest())return"";var t=String(U.team||"").toUpperCase();if(!t&&U.riderId)t=String(U.riderId).replace(/\d+$/,"").toUpperCase();return t;}
 function canOpenTeam(code){return!!ADMIN||(!!code&&myTeam()===code);}
 function teamRiders(code){return RIDERS.filter(function(r){return isTeamId(r.id,code);});}
+function riderTeam(id){for(var i=0;i<TEAM_LIST.length;i++)if(isTeamId(id,TEAM_LIST[i][0]))return TEAM_LIST[i][0];return"";}
+function canSeeRider(id){return isGuest()||canOpenTeam(riderTeam(id));}
+function blockedRider(id){var t=riderTeam(id);return'<button class="back" id="back" type="button">\u2039 Back</button><div class="card" style="text-align:center"><b>\ud83d\udd12 Team members only</b><p class="note">Rider details can only be opened by members of '+esc(t?teamName(t):"this rider\u2019s team")+'.</p></div>';}
+var teamSub="pole";
 function teamName(code){for(var i=0;i<TEAM_LIST.length;i++)if(TEAM_LIST[i][0]===code)return TEAM_LIST[i][1];return code;}
 function teamLogo(code){var d=DPICS["TEAM_"+code];if(d&&d.id)return"https://lh3.googleusercontent.com/d/"+encodeURIComponent(d.id);return(D.teamLogos&&D.teamLogos[code])||"";}
 function teamBadge(code,big){var u=teamLogo(code);return u?'<img class="tlogo'+(big?' big':'')+'" src="'+esc(u)+'" alt="'+esc(teamName(code))+' logo" loading="lazy">':'<div class="tlogo ini'+(big?' big':'')+'">'+esc(code)+'</div>';}
@@ -1348,13 +1352,19 @@ function viewTeams(){
   var h='<button class="back" id="tback" type="button">\u2039 All teams</button><div class="card thead">'+teamBadge(code,true)+'<h2>'+esc(teamName(code))+'</h2><div class="sub">'+riders.length+(riders.length===1?' rider':' riders')+' \u00b7 '+pts+' pts</div>'
    +(ADMIN?'<div class="tadm"><button type="button" data-act="team-logo">\ud83d\udcf7 '+(teamLogo(code)?'Change':'Upload')+' logo</button>'+(teamLogo(code)?'<button type="button" data-act="team-logo-clear" style="color:var(--hot)">Remove logo</button>':'')+'<input type="file" id="tm_file" accept="image/*" hidden></div>':'')+'<div class="note" id="tm_msg" style="margin-top:8px"></div></div>';
   if(!riders.length)return h+'<div class="card empty">No riders in this team yet.</div>';
+  h+='<div class="seg">'+pill("Pole position",teamSub==="pole",'data-ts="pole"')+pill("Riders",teamSub==="riders",'data-ts="riders"')+'</div>';
+  if(teamSub==="riders"){
+    var rl=standings(null,code);
+    return h+'<h3>Riders</h3><div class="card">'+rl.map(function(s2){return s2.races>0?rowHtml(s2):'<div class="row" data-r="'+s2.r.id+'"><div class="rk">\u2013</div>'+avatar(s2.r)+'<div class="mid"><b>'+esc(s2.r.nick)+'</b><span>Registered rider</span></div><div class="pt"><b>0</b><span>pts</span></div></div>';}).join("")+'</div>';
+  }
   return h+boardHtml(code,teamGrp,"data-tg");
 }
 function teamFit(blob){return createImageBitmap(blob).then(function(bm){var s=Math.min(1,512/bm.width,512/bm.height),w=Math.max(1,Math.round(bm.width*s)),h=Math.max(1,Math.round(bm.height*s));var c=document.createElement("canvas");c.width=w;c.height=h;var g=c.getContext("2d");g.drawImage(bm,0,0,w,h);if(bm.close)bm.close();return/png|webp|gif|svg/.test(blob.type)?c.toDataURL("image/png"):(function(){var o=document.createElement("canvas");o.width=w;o.height=h;var og=o.getContext("2d");og.fillStyle="#fff";og.fillRect(0,0,w,h);og.drawImage(c,0,0);return o.toDataURL("image/jpeg",0.88);})();});}
 function teamMsg(t){var m=$("tm_msg");if(m)m.textContent=t||"";}
 document.addEventListener("click",function(e){if(e.target.closest&&e.target.closest('[data-t="team"]'))curTeam=null;},true);
 document.addEventListener("click",function(e){
-  var c=e.target.closest("[data-team]");if(c){var tc=c.dataset.team;if(!canOpenTeam(tc)){toast(isGuest()?"Log in as a team member to open your team":"Only "+teamName(tc)+" members can open this team");return;}curTeam=tc;teamGrp=null;render();window.scrollTo(0,0);return;}
+  var c=e.target.closest("[data-team]");if(c){var tc=c.dataset.team;if(!canOpenTeam(tc)){toast(isGuest()?"Log in as a team member to open your team":"Only "+teamName(tc)+" members can open this team");return;}curTeam=tc;teamGrp=null;teamSub="pole";render();window.scrollTo(0,0);return;}
+  var ts=e.target.closest("[data-ts]");if(ts){teamSub=ts.dataset.ts;render();return;}
   var tg=e.target.closest("[data-tg]");if(tg){teamGrp=tg.dataset.tg==="all"?null:parseInt(tg.dataset.tg,10);render();return;}
   if(e.target.id==="tback"){curTeam=null;render();window.scrollTo(0,0);return;}
   var a=e.target.closest("[data-act]");if(!a||!curTeam)return;var act=a.dataset.act;
@@ -1524,7 +1534,7 @@ select{width:100%;margin-top:6px;font:inherit;font-size:15px;color:var(--ink);ba
   <div class="grid">
     <a class="fc" href="#app/board"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/></svg></i><b>Pole position</b><span>Live overall and birth-year standings.</span></a>
     <a class="fc" href="#app/races"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V4M4 5h13l-2 4 2 4H4"/></svg></i><b>Races</b><span>Results feed and upcoming race calendar.</span></a>
-    <a class="fc" href="#app/riders"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/></svg></i><b>Rider profiles</b><span>Podiums, best finish and race history.</span></a>
+    <a class="fc" href="#app/team"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/></svg></i><b>Rider profiles</b><span>Podiums, best finish and race history.</span></a>
     <a href="#app/market" class="fc" style="text-decoration:none;color:inherit;display:block"><i><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/></svg></i><b>Marketplace</b><span>Browse gear now, no login needed.</span></a>
   </div>
 
