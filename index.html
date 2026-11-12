@@ -365,12 +365,13 @@ function boardHtml(team,grp,gattr){
     }
     h+='<h3>'+(grp==null?"Overall standings":gLabel(grp)+" standings")+'</h3><div class="card">'+ranked.map(rowHtml).join("")+'</div>';
   }else h+='<div class="card empty">No race results in this group yet.</div>';
-  if(grp==null&&unr.length)h+='<h3>No race results yet ('+unr.length+')</h3><div class="card">'+unr.map(function(s){return '<div class="row" data-r="'+s.r.id+'"><div class="rk">–</div>'+avatar(s.r)+'<div class="mid"><b>'+esc(s.r.nick)+'</b><span>Registered rider</span></div><div class="pt"><b>0</b><span>pts</span></div></div>';}).join("")+'</div>';
+  if(grp==null&&unr.length)h+='<h3>No race results yet ('+unr.length+')</h3><div class="card">'+unr.map(function(s){return '<div class="row" data-r="'+s.r.id+'"><div class="rk">–</div>'+avatar(s.r)+'<div class="mid"><b>'+esc(s.r.nick)+'</b>'+teamLine(s.r)+'<span>Registered rider</span></div><div class="pt"><b>0</b><span>pts</span></div></div>';}).join("")+'</div>';
   return h;
 }
+function teamLine(r){var t=riderTeam(r.id);return t?'<span style="display:block">'+esc(teamName(t))+'</span>':'';}
 function rowHtml(s){
   var rc=s.rank<=3?" r"+s.rank:"";
-  return '<div class="row" data-r="'+s.r.id+'"><div class="rk'+rc+'">'+s.rank+'</div>'+avatar(s.r)+'<div class="mid"><b>'+esc(s.r.nick)+'</b><span>'+s.races+' races · '+s.pod+' podiums'+(s.r.bib?' · #'+s.r.bib:'')+'</span></div><div class="pt"><b>'+s.pts+'</b><span>pts</span></div></div>';
+  return '<div class="row" data-r="'+s.r.id+'"><div class="rk'+rc+'">'+s.rank+'</div>'+avatar(s.r)+'<div class="mid"><b>'+esc(s.r.nick)+'</b>'+teamLine(s.r)+'<span>'+s.races+' races · '+s.pod+' podiums'+(s.r.bib?' · #'+s.r.bib:'')+'</span></div><div class="pt"><b>'+s.pts+'</b><span>pts</span></div></div>';
 }
 function lvlTag(x){if(!x.tag)return"";var w=x.tag.split(" ")[0];return w.charAt(0)+w.slice(1).toLowerCase();}
 function medalCls(p){return p===1?"m1":p===2?"m2":p===3?"m3":(p&&p<=12)?"mp":"";}
@@ -393,7 +394,7 @@ function viewRaces(){
 }
 function viewRiders(){
   var list=standings(null),h='<h3>All riders</h3><div class="card">';
-  h+=list.map(function(s){return s.races>0?rowHtml(s):'<div class="row" data-r="'+s.r.id+'"><div class="rk">–</div>'+avatar(s.r)+'<div class="mid"><b>'+esc(s.r.nick)+'</b><span>Registered rider</span></div><div class="pt"><b>0</b><span>pts</span></div></div>';}).join("");
+  h+=list.map(function(s){return s.races>0?rowHtml(s):'<div class="row" data-r="'+s.r.id+'"><div class="rk">–</div>'+avatar(s.r)+'<div class="mid"><b>'+esc(s.r.nick)+'</b>'+teamLine(s.r)+'<span>Registered rider</span></div><div class="pt"><b>0</b><span>pts</span></div></div>';}).join("");
   return h+'</div>';
 }
 function viewProfile(id){
@@ -1355,7 +1356,7 @@ function viewTeams(){
   h+='<div class="seg">'+pill("Pole position",teamSub==="pole",'data-ts="pole"')+pill("Riders",teamSub==="riders",'data-ts="riders"')+'</div>';
   if(teamSub==="riders"){
     var rl=standings(null,code);
-    return h+'<h3>Riders</h3><div class="card">'+rl.map(function(s2){return s2.races>0?rowHtml(s2):'<div class="row" data-r="'+s2.r.id+'"><div class="rk">\u2013</div>'+avatar(s2.r)+'<div class="mid"><b>'+esc(s2.r.nick)+'</b><span>Registered rider</span></div><div class="pt"><b>0</b><span>pts</span></div></div>';}).join("")+'</div>';
+    return h+'<h3>Riders</h3><div class="card">'+rl.map(function(s2){return s2.races>0?rowHtml(s2):'<div class="row" data-r="'+s2.r.id+'"><div class="rk">\u2013</div>'+avatar(s2.r)+'<div class="mid"><b>'+esc(s2.r.nick)+'</b>'+teamLine(s2.r)+'<span>Registered rider</span></div><div class="pt"><b>0</b><span>pts</span></div></div>';}).join("")+'</div>';
   }
   return h+boardHtml(code,teamGrp,"data-tg");
 }
