@@ -86,6 +86,7 @@ h3{margin:4px 2px 8px;font-size:13px;text-transform:uppercase;letter-spacing:.5p
 .tadm{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}
 .tadm button{border:0;border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;font-weight:700;background:var(--chip);color:var(--ink);cursor:pointer}
 .dgrid{padding:4px 14px}.dr{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid var(--line,#8883);font-size:14px}.dr:last-child{border-bottom:0}.dr span{color:var(--muted)}.dr b{text-align:right;word-break:break-word}
+:root{--asm:#6f8f00}@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--asm:#c6f432}}:root[data-theme="dark"]{--asm:#c6f432}
 .back{border:0;background:none;color:var(--hot);font:inherit;font-weight:700;padding:4px 0 10px}
 .bars{display:flex;align-items:flex-end;gap:5px;height:64px;margin:8px 0 2px}
 .bars div{flex:1;background:var(--lime);border-radius:4px 4px 0 0;min-height:2px;position:relative}
@@ -420,6 +421,152 @@ function detailsHtml(id){
 }
 document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('[data-act="det-unlock"]');if(!a)return;var i=document.getElementById("dt_pw");if(i&&i.value)unlockDetails(i.value);});
 document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.target.id==="dt_pw"&&e.target.value)unlockDetails(e.target.value);});
+/* ---- coach/admin race performance charts ---- */
+function canSeePerf(id){return/^CPB\d+$/i.test(id||"")&&(!!ADMIN||!!COACH||(!isGuest()&&myTeam()==="CPB"));}
+function perfHtml(id){
+  if(!canSeePerf(id))return"";
+  var all=RES.filter(function(x){return x.rid===id&&x.date;}).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0;});
+  var title='<h3 style="margin-top:14px">Race performance <span class="note" style="font-weight:600">(CorePushBike team only)</span></h3>';
+  var pl=all.filter(function(x){return x.place!=null;});
+  if(pl.length<2)return title+'<div class="card empty">Not enough dated race results yet for a chart ('+pl.length+' so far).</div>';
+  var MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var n=pl.length,maxP=Math.max(4,Math.max.apply(null,pl.map(function(x){return x.place;})));
+  var W=340,H=176,L=30,R=10,T=10,B=24,iw=W-L-R,ih=H-T-B;
+  function X(i){return L+(n===1?iw/2:i*iw/(n-1));}
+  function Y(p){return T+(p-1)*ih/(maxP-1);}
+  // moving average (3 races)
+  var ma=pl.map(function(_,i){var a=Math.max(0,i-2),sum=0,c=0;for(var j=a;j<=i;j++){sum+=pl[j].place;c++;}return sum/c;});
+  var g='<rect x="'+L+'" y="'+T+'" width="'+iw+'" height="'+(Y(3.5)-T)+'" fill="var(--lime)" opacity=".18"/>';
+  [1,3,maxP].filter(function(v,i,a){return a.indexOf(v)===i;}).forEach(function(v){g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)" stroke-width="1"/><text x="'+(L-6)+'" y="'+(Y(v)+4)+'" text-anchor="end" font-size="10" fill="var(--muted)">'+ordN(v)+'</text>';});
+  var lastM="",lastX=-99;pl.forEach(function(x,i){var m=x.date.slice(0,7);if(m!==lastM){lastM=m;if(X(i)-lastX<30)return;lastX=X(i);g+='<text x="'+X(i)+'" y="'+(H-6)+'" text-anchor="'+(i===0?'start':'middle')+'" font-size="10" fill="var(--muted)">'+MN[parseInt(x.date.slice(5,7),10)-1]+'</text>';}});
+  g+='<polyline fill="none" stroke="var(--line)" stroke-width="1.5" points="'+pl.map(function(x,i){return X(i)+","+Y(x.place);}).join(" ")+'"/>';
+  g+='<polyline fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="'+ma.map(function(v,i){return X(i)+","+Y(v);}).join(" ")+'"/>';
+  pl.forEach(function(x,i){var c=x.place===1?"var(--gold)":x.place===2?"var(--silver)":x.place===3?"var(--bronze)":"var(--muted)";g+='<circle cx="'+X(i)+'" cy="'+Y(x.place)+'" r="'+(x.place<=3?5:3.5)+'" fill="'+c+'" stroke="var(--card)" stroke-width="1.5"><title>'+esc(fmtDate(x.date)+" \u00b7 "+x.event+" \u00b7 "+ordN(x.place))+'</title></circle>';});
+  var posSvg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Finish position per race, lower is better">'+g+'</svg>';
+  // cumulative points
+  var cum=0,cp=all.map(function(x){cum+=score(x);return cum;}),m=all.length,mx=Math.max(cp[m-1],1),H2=150,ih2=H2-T-B;
+  function X2(i){return L+(m===1?iw/2:i*iw/(m-1));}function Y2(v){return T+ih2-(v/mx)*ih2;}
+  var g2='';[0,Math.round(mx/2),mx].filter(function(v,i,a){return a.indexOf(v)===i;}).forEach(function(v){g2+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y2(v)+'" y2="'+Y2(v)+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(Y2(v)+4)+'" text-anchor="end" font-size="10" fill="var(--muted)">'+v+'</text>';});
+  var pts2=cp.map(function(v,i){return X2(i)+","+Y2(v);}).join(" ");
+  g2+='<polygon points="'+X2(0)+","+Y2(0)+" "+pts2+" "+X2(m-1)+","+Y2(0)+'" fill="var(--lime)" opacity=".35"/><polyline fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round" points="'+pts2+'"/>';
+  var lm="",lx=-99;all.forEach(function(x,i){var mm=x.date.slice(0,7);if(mm!==lm){lm=mm;if(X2(i)-lx<30)return;lx=X2(i);g2+='<text x="'+X2(i)+'" y="'+(H2-6)+'" text-anchor="'+(i===0?'start':'middle')+'" font-size="10" fill="var(--muted)">'+MN[parseInt(x.date.slice(5,7),10)-1]+'</text>';}});
+  var ptsSvg='<svg viewBox="0 0 '+W+' '+H2+'" width="100%" role="img" aria-label="Cumulative points over the season">'+g2+'</svg>';
+  // summary tiles
+  var avg=pl.reduce(function(a,x){return a+x.place;},0)/n,rec=pl.slice(-5),prev=pl.slice(-10,-5);
+  var ra=rec.reduce(function(a,x){return a+x.place;},0)/rec.length,pa=prev.length?prev.reduce(function(a,x){return a+x.place;},0)/prev.length:null;
+  var trend=pa==null?"\u2013":(ra<pa-0.5?"\u25b2 Improving":ra>pa+0.5?"\u25bc Slipping":"\u25ac Steady");
+  var pod=pl.filter(function(x){return x.place<=3;}).length,t10=pl.filter(function(x){return x.place<=10;}).length;
+  var tiles='<div class="kv"><div><b>'+avg.toFixed(1)+'</b><span>Avg finish</span></div><div><b>'+Math.round(pod/n*100)+'%</b><span>Podium rate</span></div><div><b>'+Math.round(t10/n*100)+'%</b><span>Top 10 rate</span></div><div><b>'+ra.toFixed(1)+'</b><span>Last '+rec.length+' avg</span></div><div><b style="font-size:14px;line-height:28px">'+trend+'</b><span>vs previous 5</span></div><div><b>'+n+'</b><span>Races charted</span></div></div>';
+  return title+'<div class="card" style="padding:12px 12px 8px">'+tiles+'<div style="font-weight:700;font-size:13px;margin:4px 2px">Finish position per race</div>'+posSvg+'<div class="note" style="margin:0 2px 10px">Dots = each race (gold/silver/bronze = podium). Thick line = 3-race average. Higher on the chart is better.</div><div style="font-weight:700;font-size:13px;margin:4px 2px">Cumulative points</div>'+ptsSvg+'</div>';
+}
+function ordN(v){var t=v%100;return v+((t>=11&&t<=13)?"th":["th","st","nd","rd","th","th","th","th","th","th"][v%10]);}
+/* ---- Rider assessment (CorePushBike only; coach & admin can view and edit) ---- */
+var ASM_SERVER=false;   // set true after adding backend/assessments-backend.gs to the Google Apps Script (see file); until then assessments are saved on this device only
+var ASM_CATS=[["speed","Speed","Maximum speed and acceleration","Work on acceleration and top-speed drills"],["balance","Balance","Body stability and bike control","Practise balance and bike-control drills"],["cornering","Cornering","Ability to navigate corners","Focus on cornering lines and entry speed"],["braking","Braking","Braking control and stopping distance","Focus on braking control"],["endurance","Endurance","Ability to maintain performance","Build stamina with longer, steady sessions"],["agility","Agility","Quick directional changes and manoeuvrability","Add quick-turn and slalom drills"],["technique","Technique","Riding posture, leg movement and coordination","Refine posture, leg movement and coordination"],["race","Race Performance","Start reaction, track navigation and race execution","Rehearse race starts and race execution"]];
+var ASM_LEVELS=[[20,"Beginner","0–20"],[40,"Developing","21–40"],[60,"Intermediate","41–60"],[80,"Advanced","61–80"],[100,"Excellent","81–100"]];
+var ASM={},asmTab="perf",asmDate=null;
+try{ASM=JSON.parse(localStorage.getItem("cpb_assess_v1")||"{}")||{};}catch(_){ASM={};}
+function asmStore(){try{localStorage.setItem("cpb_assess_v1",JSON.stringify(ASM));}catch(_){}}
+function asmRecs(id){return(ASM[id]||[]).slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0;});}
+function asmOverall(r){var t=0;ASM_CATS.forEach(function(c){t+=Number(r.s[c[0]])||0;});return Math.round(t/ASM_CATS.length);}
+function asmLevel(v){for(var i=0;i<ASM_LEVELS.length;i++)if(v<=ASM_LEVELS[i][0])return ASM_LEVELS[i][1];return"Excellent";}
+function asmCreds(){var pw=ADMIN?ADMIN_PW:COACH_PW;return pw?{id:ADMIN?AUTH_ID:COACH_ID,pw:pw}:null;}
+function asmCall(body){var c=asmCreds();if(!ASM_SERVER||!c)return Promise.reject(new Error("local"));body.id=c.id;body.pw=c.pw;return dpPost(body);}
+function asmSync(){if(!ASM_SERVER||!asmCreds())return;asmCall({action:"assess_list"}).then(function(j){var m={};(j.rows||[]).forEach(function(r){(m[r.rid]=m[r.rid]||[]).push({rid:r.rid,date:r.date,s:r.s,note:r.note||"",by:r.by||"",ts:r.ts||0});});ASM=m;asmStore();if(openRider)render();}).catch(function(){});}
+function asmTeamAvg(id){
+  var born=byId[id]&&String(byId[id].born||"").slice(0,4),lat={};
+  RIDERS.forEach(function(r){if(r.id===id||!/^CPB\d+$/i.test(r.id))return;var a=asmRecs(r.id);if(a.length)lat[r.id]=a[a.length-1];});
+  var ids=Object.keys(lat),same=ids.filter(function(k){return born&&String(byId[k].born||"").slice(0,4)===born;}),use=same.length>=2?same:ids,lab=same.length>=2?"Team average (age group)":"Team average (all CorePushBike)";
+  if(!use.length)return null;
+  return{n:use.length,label:lab,avg:ASM_CATS.map(function(c){var t=0;use.forEach(function(k){t+=Number(lat[k].s[c[0]])||0;});return Math.round(t/use.length);})};
+}
+function asmRadar(vals,team){
+  var C=150,R=100,N=8;function P(i,v){var a=-Math.PI/2+i*2*Math.PI/N;return[C+Math.cos(a)*R*v/100,C+Math.sin(a)*R*v/100];}
+  var g="";[20,40,60,80,100].forEach(function(l){g+='<polygon points="'+ASM_CATS.map(function(_,i){return P(i,l).join(",");}).join(" ")+'" fill="none" stroke="var(--line)" stroke-width="1"/>';});
+  ASM_CATS.forEach(function(_,i){var p=P(i,100);g+='<line x1="'+C+'" y1="'+C+'" x2="'+p[0]+'" y2="'+p[1]+'" stroke="var(--line)"/>';});
+  [20,60,100].forEach(function(l){g+='<text x="'+(C+3)+'" y="'+(C-R*l/100+3)+'" font-size="8" fill="var(--muted)">'+l+'</text>';});
+  if(team)g+='<polygon points="'+team.map(function(v,i){return P(i,v).join(",");}).join(" ")+'" fill="none" stroke="var(--muted)" stroke-width="1.8" stroke-dasharray="4 3"/>';
+  g+='<polygon points="'+vals.map(function(v,i){return P(i,v).join(",");}).join(" ")+'" fill="var(--asm)" fill-opacity=".28" stroke="var(--asm)" stroke-width="2.5" stroke-linejoin="round"/>';
+  vals.forEach(function(v,i){var p=P(i,v);g+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3.5" fill="var(--asm)"/>';});
+  ASM_CATS.forEach(function(c,i){var a=-Math.PI/2+i*2*Math.PI/N,x=C+Math.cos(a)*122,y=C+Math.sin(a)*118,cs=Math.cos(a),an=Math.abs(cs)<.3?"middle":cs>0?"start":"end",nm=c[1]==="Race Performance"?["Race","Performance"]:[c[1]];
+    var yy=y+(Math.sin(a)>.5?8:Math.sin(a)<-.5?-4:0)-(nm.length-1)*5;
+    g+='<text text-anchor="'+an+'" font-size="10.5" fill="var(--ink)" font-weight="600">'+nm.map(function(t,k){return'<tspan x="'+x+'" y="'+(yy+k*11)+'">'+t+'</tspan>';}).join("")+'<tspan x="'+x+'" y="'+(yy+nm.length*11+1)+'" font-size="13" font-weight="800" fill="var(--asm)">'+vals[i]+'</tspan></text>';});
+  return'<svg viewBox="-48 -6 396 316" width="100%" role="img" aria-label="Skills radar chart">'+g+'</svg>';
+}
+function asmProgress(cur,prev){
+  var W=340,H=190,L=30,R=8,T=10,B=44,iw=W-L-R,ih=H-T-B;function X(i){return L+iw*(i+.5)/8;}function Y(v){return T+ih-(v/100)*ih;}
+  var g="";[0,50,100].forEach(function(v){g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(Y(v)+4)+'" text-anchor="end" font-size="10" fill="var(--muted)">'+v+'</text>';});
+  var sh=["Speed","Balance","Corner","Brake","Endur.","Agility","Tech.","Race"];
+  ASM_CATS.forEach(function(c,i){g+='<text x="'+X(i)+'" y="'+(H-26)+'" text-anchor="middle" font-size="9.5" fill="var(--muted)">'+sh[i]+'</text>';});
+  function line(r,col,dash,w){return'<polyline fill="none" stroke="'+col+'" stroke-width="'+w+'" '+(dash?'stroke-dasharray="4 3" ':'')+'stroke-linejoin="round" points="'+ASM_CATS.map(function(c,i){return X(i)+","+Y(Number(r.s[c[0]])||0);}).join(" ")+'"/>'+ASM_CATS.map(function(c,i){return'<circle cx="'+X(i)+'" cy="'+Y(Number(r.s[c[0]])||0)+'" r="3" fill="'+col+'"><title>'+esc(c[1]+": "+(Number(r.s[c[0]])||0))+'</title></circle>';}).join("");}
+  g+=line(prev,"var(--muted)",true,1.8)+line(cur,"var(--asm)",false,2.5);
+  return'<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Progress comparison">'+g+'</svg><div class="note" style="margin:0 2px"><span style="color:var(--asm);font-weight:800">●</span> Latest ('+esc(fmtDate(cur.date))+') &nbsp; <span style="font-weight:800">○</span> Previous ('+esc(fmtDate(prev.date))+')</div>';
+}
+function asmHtml(id){
+  if(!canSeeDetails(id))return"";
+  var recs=asmRecs(id),title='<h3 style="margin-top:14px">Rider assessment <span class="note" style="font-weight:600">(coach &amp; admin only)</span></h3>';
+  var btn='<button type="button" class="btn s" data-act="asm-new" style="margin:0;width:auto">＋ New assessment</button>';
+  var note=ASM_SERVER&&asmCreds()?"":'<p class="note" style="margin:8px 2px 0">Saved on this device only until the assessment backend is connected.</p>';
+  if(!recs.length)return title+'<div class="card" style="text-align:center"><p class="note" style="margin:4px 0 12px">No assessment yet. Score the rider from 0–100 in 8 skills.</p>'+btn+note+asmGuide()+'</div>';
+  var idx=asmDate?recs.map(function(r){return r.date;}).indexOf(asmDate):-1;if(idx<0)idx=recs.length-1;
+  var cur=recs[idx],prev=idx>0?recs[idx-1]:null,ov=asmOverall(cur),lv=asmLevel(ov);
+  var tabs=[["perf","Performance"],["prog","Progress"],["team","vs Team"],["hist","History"]];
+  var h=title+'<div class="card" style="padding:12px">'
+   +'<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap"><label class="note" style="margin:0">Assessment <select id="asm_sel" data-act-change="asm-pick" style="font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--ink)">'+recs.slice().reverse().map(function(r){return'<option value="'+r.date+'"'+(r.date===cur.date?' selected':'')+'>'+esc(fmtDate(r.date))+'</option>';}).join("")+'</select></label><span>'+btn+'</span></div>'
+   +'<div class="seg" style="margin:10px 0;flex-wrap:wrap;overflow:visible">'+tabs.map(function(t){return pill(t[1],asmTab===t[0],'data-asm-tab="'+t[0]+'"');}).join("")+'</div>';
+  if(asmTab==="perf"){
+    var vals=ASM_CATS.map(function(c){return Number(cur.s[c[0]])||0;}),ta=asmTeamAvg(id);
+    var order=ASM_CATS.map(function(c,i){return{c:c,v:vals[i]};}).sort(function(a,b){return b.v-a.v;}),best=order[0],low=order[order.length-1],low2=order[order.length-2];
+    h+=asmRadar(vals,ta&&ta.avg)+'<div class="note" style="text-align:center;margin:-2px 0 10px"><span style="color:var(--asm);font-weight:800">━</span> This rider'+(ta?' &nbsp; <b>- -</b> '+esc(ta.label)+' ('+ta.n+' riders)':'')+'</div>'
+     +'<div class="pole" style="margin:0 0 10px"><span class="tag">OVERALL RIDER SCORE</span><div class="pts"><b>'+ov+'</b><span>/100</span></div><div style="font-weight:800;font-size:18px;margin-top:4px">'+lv+'</div></div>'
+     +'<div class="kv" style="grid-template-columns:1fr 1fr"><div><span>⭐ Strongest skill</span><b>'+esc(best.c[1])+'</b><span>'+best.v+' / 100</span></div><div><span>⚠️ Needs improvement</span><b>'+esc(low.c[1])+'</b><span>'+low.v+' / 100 · '+esc(low.c[3])+'</span></div></div>'
+     +'<div class="note" style="margin:0 2px 6px">🎯 <b>Training focus:</b> Improve '+esc(low.c[1])+(low2?' and '+esc(low2.c[1]):'')+' to boost overall performance.</div>'
+     +(cur.note?'<div class="note" style="margin:6px 2px"><b>Coach note:</b> '+esc(cur.note)+'</div>':'')
+     +'<div style="margin-top:8px"><button type="button" class="btn s" data-act="asm-edit" data-d="'+cur.date+'">Edit this assessment</button></div>';
+  }else if(asmTab==="prog"){
+    h+=prev?asmProgress(cur,prev)+'<div class="note" style="margin:6px 2px">Overall: '+asmOverall(prev)+' → <b>'+ov+'</b> ('+(ov-asmOverall(prev)>=0?"+":"")+(ov-asmOverall(prev))+')</div>':'<div class="empty">Add a second assessment to see progress over time.</div>';
+    if(recs.length>1){var W=340,H=110,L=30,T=10,B=22,iw=W-L-10,ih=H-T-B,pts=recs.map(function(r,i){return(L+iw*i/(recs.length-1))+","+(T+ih-asmOverall(r)/100*ih);});
+      h+='<div style="font-weight:700;font-size:13px;margin:10px 2px 2px">Overall score over time</div><svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Overall score over time">'+[0,50,100].map(function(v){return'<line x1="'+L+'" x2="'+(W-10)+'" y1="'+(T+ih-v/100*ih)+'" y2="'+(T+ih-v/100*ih)+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(T+ih-v/100*ih+4)+'" text-anchor="end" font-size="10" fill="var(--muted)">'+v+'</text>';}).join("")+'<polyline fill="none" stroke="var(--asm)" stroke-width="2.5" points="'+pts.join(" ")+'"/>'+recs.map(function(r,i){var p=pts[i].split(",");return'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3.5" fill="var(--asm)"><title>'+esc(fmtDate(r.date)+": "+asmOverall(r))+'</title></circle>'+(recs.length<=8?'<text x="'+p[0]+'" y="'+(H-6)+'" text-anchor="middle" font-size="9.5" fill="var(--muted)">'+esc(fmtDate(r.date).replace(/ \d{4}$/,""))+'</text>':'');}).join("")+'</svg>';}
+  }else if(asmTab==="team"){
+    var ta2=asmTeamAvg(id);
+    if(!ta2)h+='<div class="empty">No other CorePushBike rider has been assessed yet, so there is no team average.</div>';
+    else h+='<div class="note" style="margin:0 2px 8px">'+esc(ta2.label)+' · based on '+ta2.n+' other rider'+(ta2.n>1?'s':'')+' (latest assessments)</div>'+ASM_CATS.map(function(c,i){var v=Number(cur.s[c[0]])||0,a=ta2.avg[i];return'<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><b>'+esc(c[1])+'</b><span>'+v+' <span class="note">vs '+a+' ('+(v-a>=0?"+":"")+(v-a)+')</span></span></div><div style="height:8px;border-radius:6px;background:var(--chip);position:relative"><div style="height:8px;border-radius:6px;background:var(--asm);width:'+v+'%"></div><i style="position:absolute;top:-3px;left:'+a+'%;width:2px;height:14px;background:var(--ink)"></i></div></div>';}).join("")+'<div class="note" style="margin:8px 2px 0">Thin vertical line = team average.</div>';
+  }else{
+    h+='<div class="card" style="box-shadow:none">'+recs.slice().reverse().map(function(r){var o=asmOverall(r);return'<div class="row" data-asm-pick="'+r.date+'" style="cursor:pointer"><div class="mid"><b>'+esc(fmtDate(r.date))+'</b><span>'+asmLevel(o)+(r.by?' · by '+esc(r.by):'')+(r.note?' · '+esc(r.note.slice(0,40)):'')+'</span></div><div class="pt"><b>'+o+'</b><span>/100</span></div></div>';}).join("")+'</div>';
+  }
+  return h+note+asmGuide()+'</div>';
+}
+function asmGuide(){return'<details style="margin-top:12px"><summary class="note" style="cursor:pointer;font-weight:700">Scoring guide &amp; what each skill measures</summary><div style="margin-top:8px">'+ASM_CATS.map(function(c,i){return'<div class="dr"><span><b style="color:var(--ink)">'+(i+1)+'. '+esc(c[1])+'</b></span><b style="font-weight:500;font-size:13px">'+esc(c[2])+'</b></div>';}).join("")+'<div style="margin-top:8px">'+ASM_LEVELS.map(function(l){return'<div class="dr"><span>'+l[2]+'</span><b>'+l[1]+'</b></div>';}).join("")+'</div></div></details>';}
+function asmForm(id,date){
+  var rec=asmRecs(id).filter(function(r){return r.date===date;})[0],today=new Date(),d=date||(today.getFullYear()+"-"+("0"+(today.getMonth()+1)).slice(-2)+"-"+("0"+today.getDate()).slice(-2));
+  modal('<h2 class="mh">'+(rec?'Edit':'New')+' assessment</h2><p class="note" style="margin:0 0 6px">'+esc(byId[id].nick)+' · score each skill 0–100</p>'+fld("Date","asm_date",d,'type="date"'+(rec?' disabled':''))
+   +ASM_CATS.map(function(c){return fld(esc(c[1])+' <span class="note">'+esc(c[2])+'</span>',"asm_"+c[0],rec?rec.s[c[0]]:"",'type="number" inputmode="numeric" min="0" max="100" step="1" placeholder="0–100"');}).join("")
+   +'<label class="fl"><span>Coach note (optional)</span><textarea id="asm_note" rows="3" maxlength="400" style="width:100%;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line)">'+esc(rec?rec.note:"")+'</textarea></label><p class="note" id="asm_err" style="color:var(--hot);min-height:18px;margin:6px 0 0"></p>'
+   +'<div class="brow"><button type="button" class="btn" data-act="asm-save" data-id="'+id+'">Save</button>'+(rec?'<button type="button" class="btn s" data-act="asm-del" data-id="'+id+'" data-d="'+date+'" style="color:var(--hot)">Delete</button>':'')+'<button type="button" class="btn s" data-act="close">Cancel</button></div>');
+}
+document.addEventListener("click",function(e){
+  var t=e.target.closest&&e.target.closest("[data-asm-tab],[data-asm-pick],[data-act^='asm-']");if(!t||!openRider||!canSeeDetails(openRider))return;
+  if(t.dataset.asmTab){asmTab=t.dataset.asmTab;render();return;}
+  if(t.dataset.asmPick){asmDate=t.dataset.asmPick;asmTab="perf";render();return;}
+  var a=t.dataset.act;
+  if(a==="asm-new")asmForm(openRider,"");
+  else if(a==="asm-edit")asmForm(openRider,t.dataset.d);
+  else if(a==="asm-save"){
+    var id=t.dataset.id,date=($("asm_date").value||"").trim(),s={},bad="";
+    ASM_CATS.forEach(function(c){var v=$("asm_"+c[0]).value;if(v===""||isNaN(v)||v<0||v>100||Math.round(v)!=v)bad=c[1];s[c[0]]=Math.round(Number(v));});
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){$("asm_err").textContent="Choose a date.";return;}
+    if(bad){$("asm_err").textContent="Enter a whole number from 0 to 100 for "+bad+".";return;}
+    var rec={rid:id,date:date,s:s,note:($("asm_note").value||"").trim(),by:ADMIN?"admin":"coach",ts:Date.now()};
+    var arr=(ASM[id]||[]).filter(function(r){return r.date!==date;});arr.push(rec);ASM[id]=arr;asmStore();asmDate=date;
+    asmCall({action:"assess_save",rec:rec}).then(function(){toast("Assessment saved");}).catch(function(er){toast(er&&er.message==="local"?"Assessment saved on this device":"Saved on this device only (server error)");});
+    closeModal();render();
+  }else if(a==="asm-del"){
+    if(!confirm("Delete this assessment?"))return;var id2=t.dataset.id,d2=t.dataset.d;
+    ASM[id2]=(ASM[id2]||[]).filter(function(r){return r.date!==d2;});asmStore();asmDate=null;
+    asmCall({action:"assess_delete",rid:id2,date:d2}).catch(function(){});closeModal();render();toast("Assessment deleted");
+  }
+});
+document.addEventListener("change",function(e){if(e.target&&e.target.id==="asm_sel"){asmDate=e.target.value;render();}});
 function viewProfile(id){
   var r=byId[id],all=standings(null),me=all.filter(function(s){return s.r.id===id;})[0];
   var mine=RES.filter(function(x){return x.rid===id;});
@@ -428,7 +575,7 @@ function viewProfile(id){
   h+='<div class="kv k5"><div><b>'+me.races+'</b><span>Races</span></div><div><b>'+me.pod+'</b><span>Podiums</span></div><div><b>'+me.top10+'</b><span>Top 10</span></div><div><b>'+(me.best?ord(me.best):"–")+'</b><span>Best finish</span></div><div><b>'+(me.races?(me.pts/me.races).toFixed(1):"–")+'</b><span>Pts / race</span></div></div>';
   if(me.bonus)h+='<div class="note" style="margin:-4px 2px 8px">🌏 Includes <b>+'+me.bonus+'</b> bonus points for racing outside Malaysia.</div>';
   var bd=badgesFor(me);if(me.races)h+='<div class="badges">'+bd.map(function(b){return '<span class="badge">'+b+'</span>';}).join("")+'</div>';
-  h+=detailsHtml(id);
+  h+=detailsHtml(id)+perfHtml(id)+asmHtml(id);
   var gs=[];mine.forEach(function(x){var k=gkey(x);if(k!=null&&gs.indexOf(k)<0)gs.push(k);});gs.sort(function(a,b){return b-a;});
   if(gs.length){h+='<h3 style="margin-top:14px">Year-of-birth groups</h3><div class="card">'+gs.map(function(g){var st=standings(g).filter(function(s){return s.r.id===id;})[0],n=standings(g).length;return '<div class="row" data-g="'+g+'"><div class="rk r'+(st.rank<=3?st.rank:"")+'">'+st.rank+'</div><div class="mid"><b>'+gLabel(g)+'</b><span>'+st.races+' races · out of '+n+' riders</span></div><div class="pt"><b>'+st.pts+'</b><span>pts</span></div></div>';}).join("")+'</div>';}
   var mo=[0,0,0,0,0,0,0,0,0,0,0,0],dated=0;mine.forEach(function(x){if(x.date){mo[parseInt(x.date.slice(5,7),10)-1]+=score(x);dated++;}});
@@ -818,7 +965,7 @@ document.addEventListener("click",function(e){
   if(act==="login-go"){
     var id=($("l_id").value||"").trim().toLowerCase(),pw=$("l_pw").value||"";
     if(id===AUTH_ID&&sha256("cpb|"+id+"|"+pw)===AUTH_HASH){ADMIN=true;ADMIN_PW=pw;try{sessionStorage.setItem("cpb_admin","1");}catch(_){}closeModal();tab="admin";openRider=null;render();toast("Logged in as admin");}
-    else if(id===COACH_ID&&sha256("cpb|"+id+"|"+pw)===COACH_HASH){COACH=true;COACH_PW=pw;try{sessionStorage.setItem("cpb_coach","1");}catch(_){}closeModal();tab="team";openRider=null;render();toast("Logged in as coach");unlockDetails(pw,true);}
+    else if(id===COACH_ID&&sha256("cpb|"+id+"|"+pw)===COACH_HASH){COACH=true;COACH_PW=pw;try{sessionStorage.setItem("cpb_coach","1");}catch(_){}closeModal();tab="team";openRider=null;render();toast("Logged in as coach");unlockDetails(pw,true);asmSync();}
     else{$("l_err").textContent="Wrong ID or password.";$("l_pw").value="";}
     return;
   }
