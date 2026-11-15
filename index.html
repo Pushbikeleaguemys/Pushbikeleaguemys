@@ -167,6 +167,9 @@ table.sc th{font-size:12px;color:var(--muted);text-transform:uppercase}
 .mkthumbs button{border:0;padding:0;width:56px;height:56px;border-radius:10px;overflow:hidden;background:none}
 .mkthumbs img{width:100%;height:100%;object-fit:cover;display:block}
 .mkprice{font-size:26px;font-weight:800;margin:12px 0 2px}
+.mkimg{position:relative}.mk.pin{box-shadow:0 0 0 2px var(--lime)}
+.mkpin{position:absolute;left:8px;top:8px;z-index:1;background:var(--lime);color:var(--lime-ink,#111);font-size:10px;font-weight:800;letter-spacing:.5px;padding:3px 8px;border-radius:999px}
+.mkdate{font-size:11px;color:var(--muted);margin-top:3px}
 .mkrow{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 .mkrow span:first-child{color:var(--muted)}
 a.btn{display:block;text-align:center;text-decoration:none;margin-top:12px}
@@ -1078,7 +1081,10 @@ function mkUrl(id){return MK_DB.replace(/\/+$/,"")+"/market"+(id?"/"+encodeURICo
 function mkCache(){try{localStorage.setItem(LSC,JSON.stringify(SHARED));}catch(_){}}
 function mkOwnSave(){try{localStorage.setItem(LSO,JSON.stringify(OWN));}catch(_){}}
 function mkIsOwn(id){return OWN.indexOf(id)>=0;}
-function mkAll(){return SHARED.slice().sort(function(a,b){return(b.ts||0)-(a.ts||0);});}
+function mkDate(ts){var d=new Date(Number(ts));return isNaN(d)?"":d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});}
+function mkPinned(){return SHARED.filter(function(x){return Number(x.pin)>0;}).sort(function(a,b){return Number(b.pin)-Number(a.pin);}).slice(0,2).map(function(x){return x.id;});}
+function mkIsPin(x){return !!x&&mkPinned().indexOf(x.id)>=0;}
+function mkAll(){var pi=mkPinned();return SHARED.slice().sort(function(a,b){var pa=pi.indexOf(a.id),pb=pi.indexOf(b.id);if(pa>=0||pb>=0){if(pa<0)return 1;if(pb<0)return -1;return pa-pb;}return(b.ts||0)-(a.ts||0);});}
 function mkFind(id){for(var i=0;i<SHARED.length;i++)if(SHARED[i].id===id)return SHARED[i];return null;}
 function mkCan(x){return ADMIN||mkIsOwn(x.id);}
 function mkToken(){var t="";try{t=localStorage.getItem("cpb_mk_token")||"";if(!t){t=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("cpb_mk_token",t);}}catch(_){t="anon"+Date.now();}return t;}
@@ -1128,9 +1134,20 @@ function viewMarket(){
   else if(mkErr)h+='<p class="note" style="margin:0 2px 10px;color:var(--hot)">Could not reach the marketplace. Showing the last loaded items.</p>';
   h+=mkPills(ALLL);if(!L.length)h+='<div class="card empty">'+(ALLL.length&&mkCatSel!=="all"?'Nothing in this category yet.':'Nothing for sale yet.')+'<br>Tap “Sell an item” to post the first one.</div>';
   else h+='<div class="mkgrid">'+L.map(function(x){
-    return'<div class="mk" data-act="mk-open" data-id="'+esc(x.id)+'"><div class="mkimg">'+(x.photos&&x.photos[0]?'<img src="'+x.photos[0]+'" alt="">':BOXICON)+'</div><div class="mkb"><b class="mkp">'+esc(rm(x.price))+'</b><div class="mkt">'+esc(x.title)+'</div><div class="note">'+esc([x.brand,x.location].filter(Boolean).join(" · "))+'</div></div></div>';
+    var pn=mkIsPin(x);return'<div class="mk'+(pn?' pin':'')+'" data-act="mk-open" data-id="'+esc(x.id)+'"><div class="mkimg">'+(pn?'<span class="mkpin">PINNED</span>':'')+(x.photos&&x.photos[0]?'<img src="'+x.photos[0]+'" alt="">':BOXICON)+'</div><div class="mkb"><b class="mkp">'+esc(rm(x.price))+'</b><div class="mkt">'+esc(x.title)+'</div><div class="note">'+esc([x.brand,x.location].filter(Boolean).join(" · "))+'</div>'+(x.ts?'<div class="mkdate">Uploaded '+esc(mkDate(x.ts))+'</div>':'')+'</div></div>';
   }).join("")+'</div>';
   return h;
+}
+function mkTogglePin(id){
+  var x=mkFind(id);if(!x||!ADMIN)return;
+  var on=mkIsPin(x);
+  if(!on&&mkPinned().length>=2){toast("Only 2 items can be pinned. Unpin one first.");return;}
+  var pv=on?0:Date.now(),r=Object.assign({},x,{pin:pv});
+  mkReq("PUT",id,r).then(function(){x.pin=pv;mkCache();closeModal();render();
+    return mkFetch(true).then(function(){var y=mkFind(id);
+      if(y&&(Number(y.pin)>0)===on)toast("The server did not keep the pin. Update marketplace-backend.gs to accept a pin field.");
+      else toast(on?"Unpinned":"Pinned to top");});
+  }).catch(function(){toast("Could not save the pin. Check that the marketplace script accepts a pin field.");});
 }
 function mkOpen(id){
   var x=mkFind(id);if(!x)return;var ph=x.photos||[];
@@ -1141,8 +1158,9 @@ function mkOpen(id){
    +(x.desc?'<div class="mkdesc"><span>Description</span><div>'+esc(x.desc)+'</div></div>':'')
    +'<div class="mkrow"><span>Location</span><b>'+esc(x.location)+'</b></div>'
    +(x.seller?'<div class="mkrow"><span>Seller</span><b>'+esc(x.seller)+'</b></div>':'')
-   +(x.ts?'<div class="mkrow"><span>Posted</span><b>'+esc(new Date(x.ts).toLocaleDateString())+'</b></div>':'')
+   +(x.ts?'<div class="mkrow"><span>Uploaded</span><b>'+esc(mkDate(x.ts))+'</b></div>':'')
    +(wa?'<a class="btn" href="'+esc(wa)+'" target="_blank" rel="noopener">WhatsApp seller</a>':'')
+   +(ADMIN?'<button type="button" class="btn s" style="margin-top:10px" data-act="mk-pin" data-id="'+esc(id)+'">'+(mkIsPin(x)?'Unpin from top':'Pin to top')+'</button>':'')
    +(mkCan(x)?'<div class="brow"><button type="button" class="btn s" data-act="mk-edit" data-id="'+esc(id)+'">Edit</button><button type="button" class="btn d" data-act="mk-del" data-id="'+esc(id)+'">Delete</button></div>':'')
    +'<button type="button" class="btn s" style="margin-top:10px" data-act="close">Close</button>');
 }
@@ -1181,7 +1199,7 @@ function mkSaveForm(btn){
   var rec={title:title,cat:$("mk_cat").value,brand:$("mk_brand").value.trim(),desc:$("mk_desc").value.trim(),price:price,location:loc,seller:$("mk_seller").value.trim(),phone:ph,photos:mkPics.slice()};
   var editing=mkEditId,old=editing?mkFind(editing):null;
   if(editing&&!old)return;
-  if(editing){rec.id=old.id;rec.ts=old.ts||Date.now();}
+  if(editing){rec.id=old.id;rec.ts=old.ts||Date.now();if(Number(old.pin)>0)rec.pin=old.pin;}
   else{if(!mkDraft)mkDraft={id:"m"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),ts:Date.now()};rec.id=mkDraft.id;rec.ts=mkDraft.ts;}
   if(mkSaving)return;mkSaving=true;
   if(btn){btn.disabled=true;btn.textContent="Publishing…";}
@@ -1208,6 +1226,7 @@ document.addEventListener("click",function(e){
   if(act==="mk-add")mkForm(null);
   else if(act==="mk-cat"){mkCatSel=a.dataset.c||"all";render();}
   else if(act==="mk-open")mkOpen(a.dataset.id);
+  else if(act==="mk-pin")mkTogglePin(a.dataset.id);
   else if(act==="mk-thumb"){var m=$("mk_main"),im=a.querySelector("img");if(m&&im)m.src=im.src;}
   else if(act==="mk-edit"){var fe=mkFind(a.dataset.id);if(fe&&mkCan(fe))mkForm(a.dataset.id);}
   else if(act==="mk-rm"){mkPics.splice(+a.dataset.i,1);mkStrip();}
