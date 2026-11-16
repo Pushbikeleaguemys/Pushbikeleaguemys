@@ -257,6 +257,25 @@ header .wrap{position:relative}
 #cpbMusic.playing .eq i:nth-child(3){animation-delay:.4s}
 @keyframes cpbEq{0%,100%{height:3px}50%{height:14px}}
 @media (prefers-reduced-motion:reduce){#cpbMusic.playing .eq i{animation:none;height:9px}}
+
+/* ---- Admin: new registrations / approvals ---- */
+.regbadge{position:absolute;top:2px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--hot);color:#fff;font-style:normal;font-size:11px;font-weight:800;line-height:18px;text-align:center}
+.tabs button{position:relative}
+.regcard{border:2px solid var(--hot)}
+.regcard.none{border-color:transparent}
+.regrow{border-top:1px solid var(--line);padding:12px 0 2px}
+.regrow:first-of-type{border-top:0}
+.regrow h4{margin:0 0 2px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.regrow .meta{font-size:13px;color:var(--muted);line-height:1.5;word-break:break-word}
+.regrow .meta a{color:inherit}
+.regtag{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--ink)}
+.regtag.ok{background:var(--lime);color:var(--lime-ink)}
+.regtag.warn{background:#ffe3df;color:#a8230f}
+.regtag.rid{background:var(--hero);color:var(--hero-ink)}
+.regbtns{display:flex;gap:8px;margin:8px 0 10px}
+.regbtns .btn{margin-top:0;min-height:42px}
+.regbtns .btn.no{background:transparent;color:var(--hot);border:1.5px solid var(--hot)}
+.regbtns .btn[disabled]{opacity:.5}
 </style>
 </head>
 <body>
@@ -913,6 +932,89 @@ function viewAdmin(){
   +'<p class="note" style="margin:4px 4px 12px">'+RIDERS.length+' riders · '+RES.length+' results · last edited: '+esc(upd)+'</p>';
 }
 var render1=render;render=function(){if(tab==="admin"&&!ADMIN)tab="board";render1();};
+/* ---- Admin tab: new sign-ups waiting for approval (list + approve / reject, badge and alert) ---- */
+var REG={rows:[],loaded:false,loading:false,err:"",seen:-1,filter:"Pending",busy:{},timer:null};
+function regApiOk(){return /^https:\/\//.test(window.__cpbDB||"");}
+function regCall(action,extra){
+  var b={action:action,auth:{id:AUTH_ID,pw:ADMIN_PW}};for(var k in extra)b[k]=extra[k];
+  return fetch(window.__cpbDB,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(b)})
+    .then(function(r){if(!r.ok)throw new Error("http "+r.status);return r.json();})
+    .then(function(j){if(!j||j.error)throw new Error((j&&j.error)||"no answer");return j;});
+}
+function regPending(){return REG.rows.filter(function(x){return x.status==="Pending";}).length;}
+function regLoad(){
+  if(!ADMIN||!ADMIN_PW||!regApiOk()||REG.loading)return Promise.resolve();
+  REG.loading=true;
+  return regCall("adminlist").then(function(j){
+    REG.rows=j.rows||[];REG.err="";REG.loaded=true;
+    var n=regPending();
+    if(n>0&&(REG.seen<0||n>REG.seen))toast(REG.seen<0?(n+" registration"+(n>1?"s":"")+" waiting for approval"):"New registration waiting for approval");
+    REG.seen=n;
+  }).catch(function(er){REG.err=/Admin login required/.test(er.message)?"login":"backend";})
+   .then(function(){REG.loading=false;regPaint();});
+}
+function regDate(t){var d=new Date(t);return isNaN(d)?"":d.toLocaleDateString(undefined,{day:"numeric",month:"short"})+" "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});}
+function regRow(x){
+  var busy=!!REG.busy[x.uid],tag=x.status==="Approved"?'<span class="regtag ok">Approved</span>':x.status==="Rejected"?'<span class="regtag warn">Rejected</span>':'<span class="regtag">Pending</span>';
+  var ph=String(x.phone||"").replace(/[^\d+]/g,"");
+  var b='';
+  if(x.status!=="Approved")b+='<button type="button" class="btn" data-act="reg-approve" data-uid="'+esc(x.uid)+'"'+(busy?' disabled':'')+'>'+(busy?'Please wait…':'Approve')+'</button>';
+  if(x.status==="Pending")b+='<button type="button" class="btn no" data-act="reg-reject" data-uid="'+esc(x.uid)+'"'+(busy?' disabled':'')+'>Reject</button>';
+  if(x.status==="Approved"||x.status==="Rejected")b+='<button type="button" class="btn s" data-act="reg-pending" data-uid="'+esc(x.uid)+'"'+(busy?' disabled':'')+'>Move back to pending</button>';
+  return'<div class="regrow"><h4>'+esc(x.name||x.nick||"(no name)")+tag+(x.rid?'<span class="regtag rid">'+esc(x.rid)+'</span>':'')+(x.verified?'':'<span class="regtag warn">Email not verified</span>')+'</h4>'
+   +'<div class="meta"><b>'+esc(x.team)+'</b>'+(x.nick?' · '+esc(x.nick):'')+(x.bib?' · bib '+esc(x.bib):'')+(x.dob?' · born '+esc(x.dob):'')
+   +'<br>Parent: '+esc(x.parent||"-")+(ph?' · <a href="tel:'+esc(ph)+'">'+esc(x.phone)+'</a>':'')
+   +'<br>'+esc(x.email)+' · '+esc(regDate(x.ts))+'</div><div class="regbtns">'+b+'</div></div>';
+}
+function regInner(){
+  if(!regApiOk())return'<b>New registrations</b><p class="note">The sign-up backend is not connected in this app.</p>';
+  if(!ADMIN_PW)return'<b>New registrations</b><p class="note">Log out and log in again as admin to load and approve registrations.</p><button type="button" class="btn s" data-act="logout">Log out</button>';
+  if(REG.err==="login")return'<b>New registrations</b><p class="note">The backend refused the admin login. Log out and log in again.</p><button type="button" class="btn s" data-act="logout">Log out</button>';
+  if(REG.err)return'<b>New registrations</b><p class="note">Could not load registrations. The Apps Script needs the latest registrations file deployed as a new version.</p><button type="button" class="btn s" data-act="reg-refresh">Try again</button>';
+  if(!REG.loaded)return'<b>New registrations</b><p class="note">Loading…</p>';
+  var n=regPending(),f=REG.filter,list=REG.rows.filter(function(x){return f==="All"||x.status===f;});
+  var cnt=function(s){return REG.rows.filter(function(x){return x.status===s;}).length;};
+  return'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>New registrations'+(n?' <span class="regtag warn">'+n+' waiting</span>':'')+'</b><button type="button" class="pill" data-act="reg-refresh">Refresh</button></div>'
+   +(n?'<p class="note">Approving gives the rider their team Rider ID and lets them in as a team member.</p>':'<p class="note">Nobody is waiting for approval.</p>')
+   +'<div class="seg">'+["Pending","Approved","Rejected","All"].map(function(s){return pill(s+(s==="All"?"":" ("+cnt(s)+")"),f===s,'data-act="reg-filter" data-f="'+s+'"');}).join("")+'</div>'
+   +(list.length?list.map(regRow).join(""):'<p class="note" style="margin:6px 0">Nothing here.</p>');
+}
+function regCardHtml(){return'<div class="card regcard'+(regPending()>0?'':' none')+'" id="regcard">'+regInner()+'</div>';}
+function regPaint(){
+  var c=$("regcard");if(c){c.className="card regcard"+(regPending()>0?"":" none");c.innerHTML=regInner();}
+  var b=document.querySelector('.tabs button[data-t="admin"]');
+  if(b){var o=b.querySelector(".regbadge"),n=ADMIN?regPending():0;
+    if(n>0){if(!o){o=document.createElement("i");o.className="regbadge";b.appendChild(o);}o.textContent=n>99?"99+":n;}else if(o)o.remove();}
+}
+var regViewAdmin0=viewAdmin;viewAdmin=function(){return'<h3>Registrations</h3>'+regCardHtml()+regViewAdmin0();};
+var regRender3=render;render=function(){
+  regRender3();
+  if(ADMIN&&ADMIN_PW&&regApiOk()){
+    if(!REG.timer)REG.timer=setInterval(function(){if(ADMIN&&ADMIN_PW&&!document.hidden)regLoad();},60000);
+    if(!REG.loaded&&!REG.loading)regLoad();
+  }
+  if(!ADMIN){REG.rows=[];REG.loaded=false;REG.err="";REG.seen=-1;}
+  regPaint();
+};
+document.addEventListener("click",function(e){
+  var a=e.target.closest&&e.target.closest("[data-act]");if(!a)return;var act=a.dataset.act;
+  if(act==="reg-refresh"){REG.err="";regLoad();return;}
+  if(act==="reg-filter"){REG.filter=a.dataset.f;regPaint();return;}
+  if(act!=="reg-approve"&&act!=="reg-reject"&&act!=="reg-pending")return;
+  if(!ADMIN||!ADMIN_PW)return;
+  var uid=a.dataset.uid,x=REG.rows.filter(function(r){return r.uid===uid;})[0];if(!x||REG.busy[uid])return;
+  var st=act==="reg-approve"?"Approved":act==="reg-reject"?"Rejected":"Pending";
+  if(st==="Approved"&&!x.verified&&!confirm("This rider has not verified their email yet. Approve anyway?"))return;
+  if(st==="Rejected"&&!confirm("Reject "+(x.name||x.email)+"?"))return;
+  REG.busy[uid]=1;regPaint();
+  regCall("adminset",{uid:uid,status:st}).then(function(j){
+    for(var i=0;i<REG.rows.length;i++)if(REG.rows[i].uid===uid)REG.rows[i]=j.row;
+    REG.seen=regPending();
+    toast(st==="Approved"?"Approved · "+(j.row.rid||"Rider ID issued"):st==="Rejected"?"Rejected":"Moved back to pending");
+  }).catch(function(er){toast("Could not update: "+er.message);})
+    .then(function(){delete REG.busy[uid];regPaint();});
+});
+
 
 var editPic,PENDING=null;
 function photoBox(r){return picOf(r)?'<img src="'+picOf(r)+'" alt="">':sil();}
