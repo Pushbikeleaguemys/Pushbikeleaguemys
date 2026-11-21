@@ -502,7 +502,7 @@ function perfHtml(id){
 }
 function ordN(v){var t=v%100;return v+((t>=11&&t<=13)?"th":["th","st","nd","rd","th","th","th","th","th","th"][v%10]);}
 /* ---- Rider assessment (CorePushBike only; coach & admin can view and edit) ---- */
-var ASM_SERVER=false;   // set true after adding backend/assessments-backend.gs to the Google Apps Script (see file); until then assessments are saved on this device only
+var ASM_SERVER=true;   // set true after adding backend/assessments-backend.gs to the Google Apps Script (see file); until then assessments are saved on this device only
 var ASM_CATS=[["speed","Speed","Maximum speed and acceleration","Work on acceleration and top-speed drills"],["balance","Balance","Body stability and bike control","Practise balance and bike-control drills"],["cornering","Cornering","Ability to navigate corners","Focus on cornering lines and entry speed"],["braking","Braking","Braking control and stopping distance","Focus on braking control"],["endurance","Endurance","Ability to maintain performance","Build stamina with longer, steady sessions"],["agility","Agility","Quick directional changes and manoeuvrability","Add quick-turn and slalom drills"],["technique","Technique","Riding posture, leg movement and coordination","Refine posture, leg movement and coordination"],["race","Race Performance","Start reaction, track navigation and race execution","Rehearse race starts and race execution"]];
 var ASM_LEVELS=[[20,"Beginner","0–20"],[40,"Developing","21–40"],[60,"Intermediate","41–60"],[80,"Advanced","61–80"],[100,"Excellent","81–100"]];
 var ASM={},asmTab="perf",asmDate=null;
@@ -600,7 +600,7 @@ document.addEventListener("click",function(e){
     if(bad){$("asm_err").textContent="Enter a whole number from 0 to 100 for "+bad+".";return;}
     var rec={rid:id,date:date,s:s,note:($("asm_note").value||"").trim(),by:ADMIN?"admin":"coach",ts:Date.now()};
     var arr=(ASM[id]||[]).filter(function(r){return r.date!==date;});arr.push(rec);ASM[id]=arr;asmStore();asmDate=date;
-    asmCall({action:"assess_save",rec:rec}).then(function(){toast("Assessment saved");}).catch(function(er){toast(er&&er.message==="local"?"Assessment saved on this device":"Saved on this device only (server error)");});
+    asmCall({action:"assess_save",rec:rec}).then(function(){toast("Assessment saved");}).catch(function(er){toast(er&&er.message==="local"?"Saved on this device only \u2013 log out and log in again as coach/admin to sync":"Saved on this device only \u2013 server: "+((er&&er.message)||"error"));});
     closeModal();render();
   }else if(a==="asm-del"){
     if(!confirm("Delete this assessment?"))return;var id2=t.dataset.id,d2=t.dataset.d;
