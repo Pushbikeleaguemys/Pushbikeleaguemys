@@ -2173,13 +2173,13 @@ root.addEventListener("change",function(e){
 });
 function showWelcome(view){heroApply();
   MODE="welcome";appRoot.hidden=true;host.hidden=false;document.body.classList.add("mode-welcome");
-  document.title="Pushbike League Mys";shell.setAttribute("data-view",view);
+  document.title="Pushbike League Malaysia";shell.setAttribute("data-view",view);
   if(view==="signup"||view==="login"){sig.classList.remove("sent");form.reset();lform.reset();setErr("reg","");setErr("login","");}
   live();window.scrollTo(0,0);
 }
 function showApp(p){
   MODE="app";host.hidden=true;appRoot.hidden=false;document.body.classList.remove("mode-welcome");
-  document.title="CorePushBike League 2026";
+  document.title="Pushbike League Malaysia";
   var go=window.__cpbGo;if(!go)return;
   if(p[0]==="adminlogin"){
     go("board");
