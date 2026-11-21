@@ -439,7 +439,9 @@ function viewRiders(){
   return h+'</div>';
 }
 /* ---- coach/admin-only rider details (CorePushBike riders). Data is AES-GCM encrypted in the page and unlocked with the coach password. ---- */
-function canSeeDetails(id){return(ADMIN||COACH)&&/^CPB\d+$/i.test(id||"");}
+function isOwnRider(id){var U=window.__cpbUser;return!!id&&!!U&&!isGuest()&&!!U.riderId&&String(U.riderId).toUpperCase()===String(id).toUpperCase();}
+function canEditAsm(){return!!(ADMIN||COACH);}
+function canSeeDetails(id){return(ADMIN||COACH||isOwnRider(id))&&/^CPB\d+$/i.test(id||"");}
 function b64b(x){var b=atob(x),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
 function unlockDetails(pw,silent){
   var el=document.getElementById("rdet");
@@ -453,18 +455,19 @@ function unlockDetails(pw,silent){
 }
 function detailsHtml(id){
   if(!canSeeDetails(id))return"";
+  if(!DETAILS&&!ADMIN&&!COACH)return'<h3 style="margin-top:14px">Rider details <span class="note" style="font-weight:600">(coach, admin &amp; this rider)</span></h3><div class="card" style="text-align:center"><b>\ud83d\udd12 Not available yet</b><p class="note" style="margin:6px 0 0">Your body and bike measurements will appear here once your coach publishes them for your account.</p></div>';
   if(!DETAILS)return'<h3 style="margin-top:14px">Rider details</h3><div class="card" style="text-align:center"><b>\ud83d\udd12 Locked</b><p class="note" style="margin:6px 0 10px">Enter the coach password to view body and bike measurements.</p><input id="dt_pw" type="password" placeholder="Coach password" autocomplete="off" style="width:100%;max-width:260px;padding:10px;border-radius:10px;border:1px solid var(--line,#8884);font:inherit"><div style="margin-top:10px"><button type="button" class="btn" data-act="det-unlock">Unlock</button></div></div>';
   var d=DETAILS[id]||{};
-  return'<h3 style="margin-top:14px">Rider details <span class="note" style="font-weight:600">(coach &amp; admin only)</span></h3><div class="card dgrid">'+DETFIELDS.map(function(k){var v=d[k];return'<div class="dr"><span>'+esc(k)+'</span><b>'+(v?esc(v):"\u2013")+'</b></div>';}).join("")+'</div>';
+  return'<h3 style="margin-top:14px">Rider details <span class="note" style="font-weight:600">(coach, admin &amp; this rider)</span></h3><div class="card dgrid">'+DETFIELDS.map(function(k){var v=d[k];return'<div class="dr"><span>'+esc(k)+'</span><b>'+(v?esc(v):"\u2013")+'</b></div>';}).join("")+'</div>';
 }
 document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('[data-act="det-unlock"]');if(!a)return;var i=document.getElementById("dt_pw");if(i&&i.value)unlockDetails(i.value);});
 document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.target.id==="dt_pw"&&e.target.value)unlockDetails(e.target.value);});
 /* ---- coach/admin race performance charts ---- */
-function canSeePerf(id){return/^CPB\d+$/i.test(id||"")&&(!!ADMIN||!!COACH||(!isGuest()&&myTeam()==="CPB"));}
+function canSeePerf(id){return/^CPB\d+$/i.test(id||"")&&(!!ADMIN||!!COACH||isOwnRider(id)||(!isGuest()&&myTeam()==="CPB"));}
 function perfHtml(id){
   if(!canSeePerf(id))return"";
   var all=RES.filter(function(x){return x.rid===id&&x.date;}).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0;});
-  var title='<h3 style="margin-top:14px">Race performance <span class="note" style="font-weight:600">(CorePushBike team only)</span></h3>';
+  var title='<h3 style="margin-top:14px">Race performance <span class="note" style="font-weight:600">(coach, admin &amp; this rider)</span></h3>';
   var pl=all.filter(function(x){return x.place!=null;});
   if(pl.length<2)return title+'<div class="card empty">Not enough dated race results yet for a chart ('+pl.length+' so far).</div>';
   var MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -542,10 +545,10 @@ function asmProgress(cur,prev){
 }
 function asmHtml(id){
   if(!canSeeDetails(id))return"";
-  var recs=asmRecs(id),title='<h3 style="margin-top:14px">Rider assessment <span class="note" style="font-weight:600">(coach &amp; admin only)</span></h3>';
-  var btn='<button type="button" class="btn s" data-act="asm-new" style="margin:0;width:auto">＋ New assessment</button>';
-  var note=ASM_SERVER&&asmCreds()?"":'<p class="note" style="margin:8px 2px 0">Saved on this device only until the assessment backend is connected.</p>';
-  if(!recs.length)return title+'<div class="card" style="text-align:center"><p class="note" style="margin:4px 0 12px">No assessment yet. Score the rider from 0–100 in 8 skills.</p>'+btn+note+asmGuide()+'</div>';
+  var recs=asmRecs(id),title='<h3 style="margin-top:14px">Rider assessment <span class="note" style="font-weight:600">(coach, admin &amp; this rider)</span></h3>';
+  var btn=canEditAsm()?'<button type="button" class="btn s" data-act="asm-new" style="margin:0;width:auto">＋ New assessment</button>':'';
+  var note=(!canEditAsm()||(ASM_SERVER&&asmCreds()))?"":'<p class="note" style="margin:8px 2px 0">Saved on this device only until the assessment backend is connected.</p>';
+  if(!recs.length)return title+'<div class="card" style="text-align:center"><p class="note" style="margin:4px 0 12px">No assessment yet.'+(canEditAsm()?' Score the rider from 0–100 in 8 skills.':' Your coach will add one soon.')+'</p>'+btn+note+asmGuide()+'</div>';
   var idx=asmDate?recs.map(function(r){return r.date;}).indexOf(asmDate):-1;if(idx<0)idx=recs.length-1;
   var cur=recs[idx],prev=idx>0?recs[idx-1]:null,ov=asmOverall(cur),lv=asmLevel(ov);
   var tabs=[["perf","Performance"],["prog","Progress"],["team","vs Team"],["hist","History"]];
@@ -560,7 +563,7 @@ function asmHtml(id){
      +'<div class="kv" style="grid-template-columns:1fr 1fr"><div><span>⭐ Strongest skill</span><b>'+esc(best.c[1])+'</b><span>'+best.v+' / 100</span></div><div><span>⚠️ Needs improvement</span><b>'+esc(low.c[1])+'</b><span>'+low.v+' / 100 · '+esc(low.c[3])+'</span></div></div>'
      +'<div class="note" style="margin:0 2px 6px">🎯 <b>Training focus:</b> Improve '+esc(low.c[1])+(low2?' and '+esc(low2.c[1]):'')+' to boost overall performance.</div>'
      +(cur.note?'<div class="note" style="margin:6px 2px"><b>Coach note:</b> '+esc(cur.note)+'</div>':'')
-     +'<div style="margin-top:8px"><button type="button" class="btn s" data-act="asm-edit" data-d="'+cur.date+'">Edit this assessment</button></div>';
+     +(canEditAsm()?'<div style="margin-top:8px"><button type="button" class="btn s" data-act="asm-edit" data-d="'+cur.date+'">Edit this assessment</button></div>':'');
   }else if(asmTab==="prog"){
     h+=prev?asmProgress(cur,prev)+'<div class="note" style="margin:6px 2px">Overall: '+asmOverall(prev)+' → <b>'+ov+'</b> ('+(ov-asmOverall(prev)>=0?"+":"")+(ov-asmOverall(prev))+')</div>':'<div class="empty">Add a second assessment to see progress over time.</div>';
     if(recs.length>1){var W=340,H=110,L=30,T=10,B=22,iw=W-L-10,ih=H-T-B,pts=recs.map(function(r,i){return(L+iw*i/(recs.length-1))+","+(T+ih-asmOverall(r)/100*ih);});
@@ -587,6 +590,7 @@ document.addEventListener("click",function(e){
   if(t.dataset.asmTab){asmTab=t.dataset.asmTab;render();return;}
   if(t.dataset.asmPick){asmDate=t.dataset.asmPick;asmTab="perf";render();return;}
   var a=t.dataset.act;
+  if(/^asm-(new|edit|save|del)$/.test(a)&&!canEditAsm())return;
   if(a==="asm-new")asmForm(openRider,"");
   else if(a==="asm-edit")asmForm(openRider,t.dataset.d);
   else if(a==="asm-save"){
