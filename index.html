@@ -458,10 +458,12 @@ function detailsHtml(id){
   if(!DETAILS&&!ADMIN&&!COACH)return'<h3 style="margin-top:14px">Rider details <span class="note" style="font-weight:600">(coach, admin &amp; this rider)</span></h3><div class="card" style="text-align:center"><b>\ud83d\udd12 Not available yet</b><p class="note" style="margin:6px 0 0">Your body and bike measurements will appear here once your coach publishes them for your account.</p></div>';
   if(!DETAILS)return'<h3 style="margin-top:14px">Rider details</h3><div class="card" style="text-align:center"><b>\ud83d\udd12 Locked</b><p class="note" style="margin:6px 0 10px">Enter the coach password to view body and bike measurements.</p><input id="dt_pw" type="password" placeholder="Coach password" autocomplete="off" style="width:100%;max-width:260px;padding:10px;border-radius:10px;border:1px solid var(--line,#8884);font:inherit"><div style="margin-top:10px"><button type="button" class="btn" data-act="det-unlock">Unlock</button></div></div>';
   var d=DETAILS[id]||{};
-  return'<h3 style="margin-top:14px">Rider details <span class="note" style="font-weight:600">(coach, admin &amp; this rider)</span></h3><div class="card dgrid">'+DETFIELDS.map(function(k){var v=d[k];return'<div class="dr"><span>'+esc(k)+'</span><b>'+(v?esc(v):"\u2013")+'</b></div>';}).join("")+'</div>';
+  return'<h3 style="margin-top:14px">Rider details <span class="note" style="font-weight:600">(coach, admin &amp; this rider)</span></h3><div class="card dgrid">'+DETFIELDS.map(function(k){var v=d[k];return'<div class="dr"><span>'+esc(k)+'</span><b>'+(v?esc(v):"\u2013")+'</b></div>';}).join("")+'</div>'+((ADMIN||COACH)&&ASM_SERVER?'<div style="margin:8px 0 0"><button type="button" class="btn s" data-act="det-publish" style="width:auto">Publish details to riders</button><div class="note" style="margin:4px 2px">Lets each rider see only their own details. Run again after changing any details.</div></div>':'');
 }
 document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('[data-act="det-unlock"]');if(!a)return;var i=document.getElementById("dt_pw");if(i&&i.value)unlockDetails(i.value);});
 document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target&&e.target.id==="dt_pw"&&e.target.value)unlockDetails(e.target.value);});
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('[data-act="det-publish"]');if(!a||!DETAILS||!(ADMIN||COACH))return;
+  asmCall({action:"det_publish",data:DETAILS,fields:DETFIELDS}).then(function(j){toast("Published details for "+(j.count||0)+" riders");}).catch(function(er){toast("Could not publish: "+((er&&er.message==="local")?"log out and log in again":(er&&er.message)||"error"));});});
 /* ---- coach/admin race performance charts ---- */
 function canSeePerf(id){return/^CPB\d+$/i.test(id||"")&&(!!ADMIN||!!COACH||isOwnRider(id)||(!isGuest()&&myTeam()==="CPB"));}
 function perfHtml(id){
@@ -513,6 +515,16 @@ function asmOverall(r){var t=0;ASM_CATS.forEach(function(c){t+=Number(r.s[c[0]])
 function asmLevel(v){for(var i=0;i<ASM_LEVELS.length;i++)if(v<=ASM_LEVELS[i][0])return ASM_LEVELS[i][1];return"Excellent";}
 function asmCreds(){var pw=ADMIN?ADMIN_PW:COACH_PW;return pw?{id:ADMIN?AUTH_ID:COACH_ID,pw:pw}:null;}
 function asmCall(body){var c=asmCreds();if(!ASM_SERVER||!c)return Promise.reject(new Error("local"));body.id=c.id;body.pw=c.pw;return dpPost(body);}
+window.__cpbMine=function(u){
+  if(!ASM_SERVER||!u||ADMIN||COACH)return;
+  var m=/^(cpb\d{3})@/i.exec(u.email||"");if(!m||!u.getIdToken)return;var id=m[1].toUpperCase();
+  u.getIdToken().then(function(tk){
+    return Promise.all([
+      dpPost({action:"assess_mine",token:tk}).then(function(j){ASM[id]=(j.rows||[]).map(function(r){return{rid:r.rid,date:r.date,s:r.s,note:r.note||"",by:r.by||"",ts:r.ts||0};});}).catch(function(){}),
+      dpPost({action:"det_mine",token:tk}).then(function(j){if(j.data){DETAILS={};DETAILS[id]=j.data;DETFIELDS=j.fields||[];}}).catch(function(){})
+    ]);
+  }).then(function(){render();}).catch(function(){});
+};
 function asmSync(){if(!ASM_SERVER||!asmCreds())return;asmCall({action:"assess_list"}).then(function(j){var m={};(j.rows||[]).forEach(function(r){(m[r.rid]=m[r.rid]||[]).push({rid:r.rid,date:r.date,s:r.s,note:r.note||"",by:r.by||"",ts:r.ts||0});});ASM=m;asmStore();if(openRider)render();}).catch(function(){});}
 function asmTeamAvg(id){
   var born=byId[id]&&String(byId[id].born||"").slice(0,4),lat={};
@@ -2040,6 +2052,7 @@ function setState(u,st,extra){
   extra=extra||{};var ok=st==="member";
   try{if(ok)localStorage.setItem("cpb_member","1");else localStorage.removeItem("cpb_member");}catch(_){}
   window.__cpbUser=u?{uid:u.uid,email:u.email,name:u.displayName,state:st,riderId:extra.riderId||(isRider(u)?u.email.split("@")[0].toUpperCase():""),team:extra.team||""}:null;
+  try{if(u&&window.__cpbMine)window.__cpbMine(u);}catch(_){}
   var a=root.querySelector(".auth");
   if(a)a.innerHTML=u?'<a href="#app/board" class="sbtn fill">Open league</a><a href="#" data-out class="sbtn ghost">Log out</a>':'<a href="#login" class="sbtn ghost">Log in</a><a href="#signup" class="sbtn fill">Sign up</a>';
   if(!chip){chip=document.createElement("button");chip.id="acctChip";chip.type="button";chip.addEventListener("click",openAcct);document.body.appendChild(chip);}

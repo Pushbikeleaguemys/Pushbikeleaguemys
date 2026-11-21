@@ -18,6 +18,9 @@
  */
 var ASM_SHEET_ID = '1pF-kWBA4IkYBq76gwUF0t1wYSB2a5n_gRE5hlCJQ3w4';   // same Sheet as sign-ups; or leave '' to use the script's own spreadsheet
 var ASM_TAB = 'Assessments';
+var DET_TAB = 'RiderDetails';
+var ASM_FB_KEY = 'AIzaSyCbnx37DZ_qn24snAHTptXkvkzh5nHNqdU';   // Firebase web API key (public, same as in the app)
+var ASM_RIDER_DOMAIN = 'rider.pushbikeleague.my';
 var ASM_HEAD = ['Rider ID','Date','Speed','Balance','Cornering','Braking','Endurance','Agility','Technique','Race Performance','Note','By','Updated'];
 var ASM_KEYS = ['speed','balance','cornering','braking','endurance','agility','technique','race'];
 // sha256 of "cpb|<id>|<password>" (same scheme the app uses); passwords themselves are never stored here
@@ -36,17 +39,51 @@ function asmSheet_(){
   if (!sh) { sh = ss.insertSheet(ASM_TAB); sh.appendRow(ASM_HEAD); sh.setFrozenRows(1); sh.getRange(1,1,1,ASM_HEAD.length).setFontWeight('bold'); }
   return sh;
 }
+// Verifies a Firebase login token with Google and returns the rider ID (e.g. CPB012) it belongs to, or ''.
+function asmRiderFromToken_(tok){
+  if (!tok) return '';
+  try {
+    var r = UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + ASM_FB_KEY,
+      {method:'post', contentType:'application/json', payload:JSON.stringify({idToken:String(tok)}), muteHttpExceptions:true});
+    if (r.getResponseCode() !== 200) return '';
+    var u = (JSON.parse(r.getContentText()).users || [])[0];
+    var m = u && u.email ? /^(cpb\d{3})@(.+)$/i.exec(u.email) : null;
+    return (m && m[2].toLowerCase() === ASM_RIDER_DOMAIN) ? m[1].toUpperCase() : '';
+  } catch (e) { return ''; }
+}
 function asmHandle_(body){
-  if (!body || !body.action || String(body.action).indexOf('assess_') !== 0) return null;
-  var id = String(body.id || '').toLowerCase();
-  if (!ASM_AUTH[id] || asmSha_('cpb|' + id + '|' + String(body.pw || '')) !== ASM_AUTH[id]) return {ok:false, error:'Not allowed'};
+  if (!body || !body.action) return null;
+  var act = String(body.action);
+  if (act.indexOf('assess_') !== 0 && act.indexOf('det_') !== 0) return null;
+  var mine = (act === 'assess_mine' || act === 'det_mine'), who = '', id = '';
+  if (mine) {
+    who = asmRiderFromToken_(body.token);            // a rider can only ever read their OWN record
+    if (!who) return {ok:false, error:'Please log in again'};
+  } else {
+    id = String(body.id || '').toLowerCase();
+    if (!ASM_AUTH[id] || asmSha_('cpb|' + id + '|' + String(body.pw || '')) !== ASM_AUTH[id]) return {ok:false, error:'Not allowed'};
+  }
   var lock = LockService.getScriptLock(); lock.waitLock(20000);
   try {
+    if (act === 'det_publish' || act === 'det_mine') {
+      var ss2 = ASM_SHEET_ID ? SpreadsheetApp.openById(ASM_SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
+      var ds = ss2.getSheetByName(DET_TAB) || ss2.insertSheet(DET_TAB);
+      if (act === 'det_publish') {
+        var data = body.data || {}, fields = body.fields || [], out = [['Rider ID','Details (JSON)','Fields (JSON)','Updated']];
+        Object.keys(data).forEach(function(k){ if (/^CPB\d+$/i.test(k)) out.push([k.toUpperCase(), JSON.stringify(data[k]), JSON.stringify(fields), Date.now()]); });
+        ds.clear(); ds.getRange(1, 1, out.length, 4).setNumberFormat('@').setValues(out); ds.setFrozenRows(1);
+        return {ok:true, count:out.length - 1};
+      }
+      var dv = ds.getDataRange().getValues();
+      for (var q = 1; q < dv.length; q++) if (String(dv[q][0]).toUpperCase() === who) return {ok:true, data:JSON.parse(dv[q][1]), fields:JSON.parse(dv[q][2] || '[]')};
+      return {ok:true, data:null};
+    }
     var sh = asmSheet_(), vals = sh.getDataRange().getValues();
-    if (body.action === 'assess_list') {
+    if (act === 'assess_list' || act === 'assess_mine') {
       var rows = [];
       for (var i = 1; i < vals.length; i++) {
         var r = vals[i]; if (!r[0]) continue;
+        if (mine && String(r[0]).toUpperCase() !== who) continue;
         var s = {}; ASM_KEYS.forEach(function(k, j){ s[k] = Number(r[2 + j]) || 0; });
         var d = r[1] instanceof Date ? Utilities.formatDate(r[1], 'Asia/Kuala_Lumpur', 'yyyy-MM-dd') : String(r[1]);
         rows.push({rid:String(r[0]), date:d, s:s, note:String(r[10] || ''), by:String(r[11] || ''), ts:Number(r[12]) || 0});
