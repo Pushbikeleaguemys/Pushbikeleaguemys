@@ -312,7 +312,7 @@ header .wrap{position:relative}
 "use strict";
 var LSK="cpb_league_data_v1";
 var D=migrate(JSON.parse(document.getElementById("seed").textContent));
-(function(){try{var s=localStorage.getItem(LSK);if(s){var o=JSON.parse(s);if(o&&Array.isArray(o.riders)&&Array.isArray(o.results)&&(o.updated||0)>(D.updated||0))D=migrate(o);}}catch(_){}})();
+(function(){try{var s=localStorage.getItem(LSK);if(s){var o=JSON.parse(s);if(o&&Array.isArray(o.riders)&&Array.isArray(o.results)&&(o.updated||0)>(D.updated||0))D=migrate(o);else if(o&&o.openTrack&&!D.openTrack)D.openTrack=o.openTrack;}}catch(_){}})();
 var LEAGUE_YEAR=2026,MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 /* Age-range categories (e.g. "5 - 9 Tahun", "6-7 TAHUN", "4-6 TAHUN OPEN") are treated as OPEN,
    and their points count under the rider's own year of birth. Month ranges like 3.1-3.6 are not affected. */
