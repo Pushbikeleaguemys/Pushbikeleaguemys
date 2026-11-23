@@ -199,6 +199,15 @@ a.btn{display:block;text-align:center;text-decoration:none;margin-top:12px}
 .evflag{position:absolute;top:-11px;left:-11px;font-size:26px;line-height:1;transform:rotate(-18deg);z-index:0;pointer-events:none}
 .evdate{position:relative;z-index:1}
 .evcard.past{opacity:.65}
+.evcard .evtx{flex:1;min-width:0}
+.evcard .evact{display:flex;flex:none;gap:6px}
+@media (max-width:640px){
+ .evcard{flex-wrap:wrap;align-items:center;gap:10px 12px}
+ .evcard .evtx{flex:1 1 100%;order:3}
+ .evcard .evposter{margin:0 0 0 auto;order:2}
+ .evcard .evdw{order:1}
+ .evcard .evact{order:4;flex:1 1 100%;justify-content:flex-end}
+}
 .evsub{margin:12px 2px 6px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .evhead{display:flex;justify-content:space-between;align-items:center;gap:10px}
 details.lg{margin:10px 0}details.lg>summary{cursor:pointer;font-weight:700;padding:12px 14px;background:var(--card);border-radius:14px;list-style:none}
@@ -1473,8 +1482,8 @@ function evCard(x,past){
   var p=(x.date||"").split("-"),mon=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   var dd=p.length===3?'<div class="evdw"><span class="evflag" aria-hidden="true">🏁</span><div class="evdate">'+parseInt(p[2],10)+'<small>'+mon[parseInt(p[1],10)-1]+' '+p[0]+'</small></div></div>':'';
   var ex=evExtra(x);
-  return'<div class="evcard'+(past?' past':'')+'">'+dd+ex.poster+'<div style="flex:1;min-width:0"><div class="evn">'+esc(x.name)+'</div><div class="evl">📍 '+esc(x.location)+' · '+esc(fmtDate(x.date))+'</div>'+ex.link+'</div>'
-   +(ADMIN?'<span style="display:flex;flex:none"><button type="button" class="ebtn" data-act="ev-edit" data-id="'+esc(x.id)+'">Edit</button><button type="button" class="ebtn" style="color:var(--hot)" data-act="ev-del" data-id="'+esc(x.id)+'">Delete</button></span>':'')+'</div>';
+  return'<div class="evcard'+(past?' past':'')+'">'+dd+ex.poster+'<div class="evtx"><div class="evn">'+esc(x.name)+'</div><div class="evl">📍 '+esc(x.location)+' · '+esc(fmtDate(x.date))+'</div>'+ex.link+'</div>'
+   +(ADMIN?'<span class="evact"><button type="button" class="ebtn" data-act="ev-edit" data-id="'+esc(x.id)+'">Edit</button><button type="button" class="ebtn" style="color:var(--hot)" data-act="ev-del" data-id="'+esc(x.id)+'">Delete</button></span>':'')+'</div>';
 }
 function viewEvents(){
   evFetch();
