@@ -983,15 +983,34 @@ document.addEventListener("click",function(e){
      +'<p class="note" id="ot_err" style="color:#e5484d"></p>'
      +'<div class="brow"><button type="button" class="btn s" data-act="close">Cancel</button><button type="button" class="btn s" data-act="ot-reset">Reset</button><button type="button" class="btn" data-act="ot-save">Save</button></div>');
     return;}
-  if(act==="ot-reset"){delete D.openTrack;save();closeModal();render();try{window.__cpbOT();}catch(_){}toast("Open Track reset to defaults");return;}
+  if(act==="ot-reset"){delete D.openTrack;save();closeModal();render();try{window.__cpbOT();}catch(_){}otPush(null).then(function(){toast("Open Track reset for everyone");}).catch(function(){toast("Reset on this device only (update the events script to publish)");});return;}
   if(act==="ot-save"){
     var g=function(i){return(document.getElementById(i).value||"").trim();},u=g("ot_url");
     if(!/^https:\/\//.test(u)){document.getElementById("ot_err").textContent="The Jotform link must start with https://";return;}
     D.openTrack={on:document.getElementById("ot_on").checked,title:g("ot_title"),intro:g("ot_intro"),date:g("ot_date"),time:g("ot_time"),venue:g("ot_venue"),fee:g("ot_fee"),note:g("ot_note"),url:u};
-    if(save()){closeModal();render();try{window.__cpbOT();}catch(_){}toast("Open Track saved");}
+    if(save()){closeModal();render();try{window.__cpbOT();}catch(_){}otPush(D.openTrack).then(function(){toast("Open Track published for everyone");}).catch(function(er){toast("Saved on this device only: "+((er&&er.message)||"could not reach the events script")+". Update the events script (see backend/events-backend.gs).");});}
   }
 });
 var render1=render;render=function(){if(tab==="admin"&&!ADMIN)tab="board";render1();};
+/* ---- Open Track pop-out: shared with every visitor through the events Apps Script (kind "settings") ---- */
+function otPush(c){
+  if(!/^https:\/\//.test(EV_DB||""))return Promise.reject(new Error("events script not set"));
+  var k=evKey();if(!k)return Promise.reject(new Error("no admin key"));
+  return gPost(c?{action:"put",kind:"settings",name:"opentrack",rec:c,key:k}:{action:"delete",kind:"settings",name:"opentrack",key:k},EV_DB);
+}
+var OTPULL=0;
+function otPull(){
+  if(!/^https:\/\//.test(EV_DB||"")||document.hidden||Date.now()-OTPULL<20000)return;
+  OTPULL=Date.now();
+  fetch(EV_DB+"?kind=settings&t="+Date.now()).then(function(r){return r.ok?r.json():null;}).then(function(j){
+    if(!j||typeof j!=="object"||!("opentrack" in j))return;
+    var o=j.opentrack;
+    if(o&&typeof o==="object"){if(JSON.stringify(D.openTrack||null)!==JSON.stringify(o)){D.openTrack=o;try{window.__cpbOT();}catch(_){}if(ADMIN&&tab==="admin")render();}}
+    else if(o===null&&D.openTrack&&!ADMIN){/* nothing published: keep built-in text */}
+  }).catch(function(){});
+}
+setTimeout(otPull,600);setInterval(otPull,60000);document.addEventListener("visibilitychange",otPull);
+
 /* ---- Admin tab: new sign-ups waiting for approval (list + approve / reject, badge and alert) ---- */
 var REG={rows:[],loaded:false,loading:false,err:"",seen:-1,filter:"Pending",busy:{},timer:null};
 function regApiOk(){return /^https:\/\//.test(window.__cpbDB||"");}

@@ -77,6 +77,11 @@ function clean_(rec) {
 function doGet(e) {
   var kind = e && e.parameter && e.parameter.kind;
   if (kind === "events") return out_(readAll_());
+  if (kind === "settings") {
+    var raw = PropertiesService.getScriptProperties().getProperty("OPENTRACK"), ot = null;
+    try { ot = raw ? JSON.parse(raw) : null; } catch (x) { ot = null; }
+    return out_({ opentrack: ot });
+  }
   return out_({ ok: true, service: "cpb-events" });
 }
 
@@ -97,6 +102,21 @@ function doPost(e) {
       var file = folder_().createFile(blob);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       return out_({ ok: true, url: "https://lh3.googleusercontent.com/d/" + file.getId() + "=w1000" });
+    }
+
+    if (b.kind === "settings" && b.name === "opentrack") {
+      var props = PropertiesService.getScriptProperties();
+      if (b.action === "delete") { props.deleteProperty("OPENTRACK"); return out_({ ok: true }); }
+      if (b.action === "put" && b.rec) {
+        var c = {}, f = ["title", "intro", "date", "time", "venue", "fee", "note"];
+        for (var i = 0; i < f.length; i++) c[f[i]] = String(b.rec[f[i]] || "").slice(0, 400);
+        var u = String(b.rec.url || "").trim();
+        c.url = /^https:\/\/[^\s"'<>]+$/i.test(u) ? u.slice(0, 500) : "";
+        c.on = b.rec.on !== false;
+        props.setProperty("OPENTRACK", JSON.stringify(c));
+        return out_({ ok: true });
+      }
+      return out_({ error: "missing data" });
     }
 
     if (b.kind !== "events") return out_({ error: "unknown kind" });
