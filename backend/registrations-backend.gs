@@ -107,6 +107,17 @@ function clean_(v, n){ return String(v==null?'':v).replace(/^[=+\-@]/,"'$&").sli
 
 function regHandle_(body){
   if (body && (body.action === 'adminlist' || body.action === 'adminset')) return adminHandle_(body);
+  // Public roster of APPROVED riders (no contact details) so the app can show them on their team page.
+  if (body && body.action === 'roster') {
+    var rs = regSheet_(), rl = rs.getLastRow(), out = [];
+    if (rl >= 2) rs.getRange(2, 1, rl-1, REG_HEAD.length).getValues().forEach(function(v){
+      if (String(v[C.STATUS-1]).toLowerCase() === 'approved' && v[C.RID-1]) {
+        var y = (String(v[C.DOB-1]).match(/(19|20)\d{2}/) || [''])[0];
+        out.push({rid:String(v[C.RID-1]), name:String(v[C.NAME-1]), nick:String(v[C.NICK-1]), bib:String(v[C.BIB-1]), born:y});
+      }
+    });
+    return {ok:true, riders:out};
+  }
   if (!body || (body.action !== 'register' && body.action !== 'mystatus')) return null;
   var who = verifyToken_(body.idToken);
   if (!who) return {error:'bad token'};

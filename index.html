@@ -1001,6 +1001,26 @@ document.addEventListener("click",function(e){
   }
 });
 var render1=render;render=function(){if(tab==="admin"&&!ADMIN)tab="board";render1();};
+/* ---- Approved sign-ups appear on their team page for everyone (public roster from the registrations script) ---- */
+var ROSTLAST=0;
+function rosterPull(){
+  if(!regApiOk()||document.hidden||Date.now()-ROSTLAST<30000)return;
+  ROSTLAST=Date.now();
+  fetch(window.__cpbDB,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"roster"})})
+   .then(function(r){return r.ok?r.json():null;}).then(function(j){
+    if(!j||!Array.isArray(j.riders))return;var add=0;
+    j.riders.forEach(function(x){
+      var id=String(x.rid||"").toUpperCase();if(!/^[A-Z0-9]{2,4}\d+$/.test(id)||byId[id])return;
+      var nm=String(x.name||"").trim().slice(0,80),nk=String(x.nick||"").trim().slice(0,40),bib=parseInt(x.bib,10);
+      var r={id:id,nick:nk||nm||id,name:nm||nk||id,bib:isNaN(bib)?null:bib,g:"",fromReg:1};
+      var by=parseInt(x.born,10);if(by>=1990&&by<=2030){r.born=by;r.bi=1;}
+      RIDERS.push(r);byId[id]=r;add++;
+    });
+    if(add&&!document.querySelector("#modal.on"))render();
+  }).catch(function(){});
+}
+setTimeout(rosterPull,900);setInterval(rosterPull,60000);document.addEventListener("visibilitychange",rosterPull);
+
 /* ---- Open Track pop-out: shared with every visitor through the events Apps Script (kind "settings") ---- */
 function otPush(c){
   if(!/^https:\/\//.test(EV_DB||""))return Promise.reject(new Error("events script not set"));
